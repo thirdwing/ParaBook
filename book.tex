@@ -1,11 +1,24 @@
 \documentclass[twoside,nofonts,fancyhdr, 12.5pt]{ctexbook}
-\usepackage{amsmath,amsthm, amsfonts, array}
+
+\usepackage{amsmath}
+\newtheorem{theorem}{Theorem}
+\newcommand{\BlackBox}{\rule{1.5ex}{1.5ex}}  % end of proof
+\newenvironment{proof}{\par\noindent{\bf Proof\
+}}{\hfill\BlackBox\\[2mm]}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{axiom}[theorem]{Axiom}
+
 \usepackage{graphicx,booktabs,xcolor,color}
 \usepackage{listings}
 \usepackage{verbatim}
 \usepackage{fancybox,fancyhdr}
 \usepackage{xeCJK}
-
+\usepackage{relsize}
 \usepackage[a4paper,marginparsep=6mm,marginparwidth=6mm,footskip=3.5pc,centering]{geometry}
 
 
@@ -14,8 +27,17 @@
 \usepackage[toc,page]{appendix}
 \usepackage{titlesec}
 \usepackage[font=small,labelfont=bf,skip=0pt, aboveskip=0pt, belowskip=0pt,labelsep=space]{caption}
-% \setlength{\belowcaptionskip}{2pt plus 1pt minus 1pt}
-% \setlength{\abovecaptionskip}{2pt plus 1pt minus 1pt}
+
+\setlength{\oddsidemargin}{0.0in}
+\setlength{\evensidemargin}{0.0in}
+\setlength{\topmargin}{0.0in}
+\setlength{\topskip}{0.5in}
+\setlength{\headheight}{0.5in}
+\setlength{\headsep}{0in}
+\setlength{\textwidth}{6.5in}
+\setlength{\textheight}{8.0in}
+\setlength{\parindent}{0in}
+\setlength{\parskip}{0.1in}
 
 \usepackage{hyperref}
 \usepackage[figure,table]{hypcap}
@@ -176,12 +198,9 @@
 \include{./chapter/cover}
 \pagecolor{white}
 
-%\include{./chapter/preface1}
-%\cleardoublepage
-%\include{./chapter/preface2}
-%\cleardoublepage
-%\include{./chapter/acknowledgment}
+\include{./preface/AboutBook}
 
+\include{./preface/AuthorBio}
 
 
 \cleardoublepage
@@ -194,18 +213,26 @@
 
 \cleardoublepage
 \pagenumbering{arabic}
-%\include{./chapter/Intro}
+\include{./chapter/Intro}
+\include{./chapter/PerfIssues}
+\include{./chapter/SharedMem}
+\include{./chapter/OpenMP}
+\include{./chapter/CUDA}
+\include{./chapter/Thrust}
+\include{./chapter/MsgPassing}
+\include{./chapter/MPI}
+\include{./chapter/hadoop}
 \include{./chapter/R}
-%\include{./chapter/chapter4}
-%\include{./chapter/chapter5}
-%\include{./chapter/chapter6}
-%\include{./chapter/chapter7}
-%\include{./chapter/chapter8}
-%\include{./chapter/chapter9}
-%\include{./chapter/chapter10}
-%\include{./chapter/chapter11}
+\include{./chapter/Prefix}
+\include{./chapter/Matrix}
+\include{./chapter/Sorting}
+\include{./chapter/Fourier}
+\include{./chapter/Stat}
+\include{./chapter/PyThreads}
 
-%\appendix
-%\include{./chapter/appendix}
-
+\appendix
+\include{./appendix/SystemsTutorial}
+\include{./appendix/MatrixReview}
+\include{./appendix/R5MinIntro}
+\include{./appendix/PyMiniIntro}
 \end{document}

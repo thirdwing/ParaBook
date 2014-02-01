@@ -1,0 +1,1237 @@
+\chapter{Introduction to Parallel Matrix Operations}
+\label{chap:matrix}
+
+\section{``We're Not in Physicsland Anymore, Toto''}
+\label{notallphys}
+
+In the early days parallel processing was mostly used in physics
+problems.  Typical problems of interest would be grid computations such
+as the heat equation, matrix multiplication, matrix inversion (or
+equivalent operations) and so on.  These matrices are not those little
+3x3 toys you worked with in your linear algebra class.  In parallel
+processing applications of matrix algebra, our matrices can have
+thousands of rows and columns, or even larger.
+
+The range of applications of parallel processing is of course far
+broader today, such as image processing, social networks and data
+mining.  Google employs a number of linear algebra experts, and they
+deal with matrices with literally millions of rows or columns.
+
+We assume for now that the matrices are {\bf dense}, meaning that most
+of their entries are nonzero.  This is in contrast to {\bf sparse}
+matrices, with many zeros.  Clearly we would use differents type of
+algorithms for sparse matrices than for dense ones.  We'll cover sparse
+matrices a bit in Section \ref{sparse}.
+
+% \section{Message-Passing Setting}
+% 
+% The algorithms presented in this introduction will mainly be written
+% from a message-passing point of view, assuming MPI for concreteness.
+% Adaptations to the shared-memory paradigm will be discussed in Section
+% \ref{sm}.
+
+\section{Partitioned Matrices}
+\label{partitioned}
+
+Parallel processing of course relies on finding a way to partition the
+work to be done.  In the matrix algorithm case, this is often done by
+dividing a matrix into blocks (often called {\bf tiles} these days). 
+
+For example, let 
+
+\begin{equation}
+A = 
+\left (
+\begin{array}{ccc}
+1 & 5 & 12 \\
+0 & 3 & 6 \\
+4 & 8 & 2
+\end{array}
+\right )
+\end{equation}
+
+and
+
+\begin{equation}
+B = 
+\left (
+\begin{array}{ccc}
+0 & 2 & 5 \\
+0 & 9 & 10 \\
+1 & 1 & 2
+\end{array}
+\right ), 
+\end{equation}
+
+so that 
+
+\begin{equation}
+C = AB = 
+\left (
+\begin{array}{ccc}
+12 & 59 & 79 \\
+6 & 33 & 42 \\
+2 & 82 & 104
+\end{array}
+\right ) .
+\end{equation}
+
+We could partition A as
+
+\begin{equation}
+A =
+\left (
+\begin{array}{cc}
+A_{00} & A_{01} \\
+A_{10} & A_{11}
+\end{array}
+\right ) ,
+\end{equation}
+
+where
+
+\begin{equation}
+A_{00} =
+\left (
+\begin{array}{cc}
+1 & 5 \\
+0 & 3
+\end{array}
+\right )  ,
+\end{equation}
+
+\begin{equation}
+A_{01} =
+\left (
+\begin{array}{cc}
+12 \\
+6 
+\end{array}
+\right ),
+\end{equation}
+
+\begin{equation}
+A_{10} =
+\left (
+\begin{array}{cc}
+4 & 8 
+\end{array}
+\right )  
+\end{equation}
+
+and 
+
+\begin{equation}
+A_{11} =
+\left (
+\begin{array}{c}
+2
+\end{array}
+\right ).
+\end{equation}
+
+Similarly we would partition B and C into blocks of a compatible size to A, 
+
+\begin{equation}
+B =
+\left (
+\begin{array}{cc}
+B_{00} & B_{01} \\
+B_{10} & B_{11}
+\end{array}
+\right )
+\end{equation}
+
+and 
+
+\begin{equation}
+C =
+\left (
+\begin{array}{cc}
+C_{00} & C_{01} \\
+C_{10} & C_{11}
+\end{array}
+\right ) ,
+\end{equation}
+
+so that for example 
+
+\begin{equation}
+B_{10} =
+\left (
+\begin{array}{cc}
+1 & 1
+\end{array}
+\right ) .
+\end{equation}
+
+The key point is that multiplication still works if we pretend that
+those submatrices are numbers!  For example, pretending like that would
+give the relation
+
+\begin{equation}
+C_{00} = A_{00} B_{00} + A_{01} B_{10}, 
+\end{equation}
+
+which the reader should verify really is correct as matrices, i.e. the
+computation on the right side really does yield a matrix equal to $C_{00}$.
+
+\section{Parallel Matrix Multiplication}
+\label{parmatmult}
+
+Since so many parallel matrix algorithms rely on matrix multiplication,
+a core issue is how to parallelize that operation.
+
+Let's suppose for the sake of simplicity that each of the matrices to be
+multiplied is of dimensions n x n.  Let p denote the number of
+``processes,'' such as shared-memory threads or message-passing nodes.  
+
+\subsection{Message-Passing Case}
+
+For concreteness here and in other sections below on message passing,
+assume we are using MPI.
+
+The obvious plan of attack here is to break the matrices into blocks,
+and then assign different blocks to different MPI nodes.  Assume that
+$\sqrt{p}$ evenly divides n, and partition each matrix into submatrices of
+size $n/\sqrt{p}$ x $n/\sqrt{p}$.  In other words, each matrix will be
+divided into m rows and m columns of blocks, where $m = n/\sqrt{p}$.
+
+One of the conditions assumed here is that the matrices A and B are
+stored in a distributed manner across the nodes.  This situation could
+arise for several reasons:
+
+\begin{itemize}
+
+   \item The application is such that it is natural for each node to
+   possess only part of A and B.
+
+   \item One node, say node 0, originally contains all of A and B, but
+   in order to conserve communication time, it sends each node only
+   parts of those matrices.
+
+   \item The entire matrix would not fit in the available memory at the
+   individual nodes.
+
+\end{itemize}
+
+As you'll see, the algorithms then have the nodes passing blocks among
+themselves.
+
+\subsubsection{Fox's Algorithm}
+\label{matmult}
+
+Consider the node that has the responsibility of calculating block (i,j) 
+of the product C, which it calculates as
+
+\begin{equation}
+A_{i0} B_{0j} + A_{i1} B_{1j} + ... + A_{ii} B_{ij} + ...
++ A_{i,m-1} B_{m-1,j}
+\end{equation}
+
+Rearrange this with $A_{ii}$ first:
+
+\begin{equation}
+A_{ii} B_{ij} + A_{i,i+1} B_{,i+1j} + ... + A_{i,m-1} B_{m-1,j} + 
+A_{i0} B_{0j} + A_{i1} B_{1j} + ... + A_{i,i-1} B_{i-1,j}
+\end{equation}
+
+Written more compactly, this is
+
+\begin{equation}
+\sum_{k=0}^{m-1} A_{i,(i+k) mod ~ m} B_{(i+k) mod ~ m,j}
+\end{equation}
+
+In other words, start with the $A_{ii}$ term, then go across row i of A,
+wrapping back up to the left end when you reach the right end.  The
+order of summation in this rearrangement will be the actual order of
+computation.  It's similar for B, in column j.
+
+The algorithm is then as follows.  The node which is handling the
+computation of $C_{ij}$ does this (in parallel with the other nodes
+which are working with their own values of i and j):
+
+\begin{lstlisting}[numbers=left]
+iup  = i+1 mod m;
+idown = i-1 mod m;
+for (k = 0; k < m; k++) {
+    km = (i+k) mod m;
+    broadcast(A[i,km]) to all nodes handling row i of C;
+    C[i,j] = C[i,j] + A[i,km]*B[km,j]
+    send B[km,j] to the node handling C[idown,j]
+    receive new B[km+1 mod m,j] from the node handling C[iup,j]
+}   
+\end{lstlisting}
+
+The main idea is to have the various computational nodes repeatedly
+exchange submatrices with each other, timed so that a node receives the
+submatrix it needs for its computation ``just in time.''
+
+This is Fox's algorithm.  Cannon's algorithm is similar, except that
+it does cyclical rotation in both rows and columns, compared to Fox's
+rotation only in columns but broadcast within rows.
+
+The algorithm can be adapted in the obvious way to nonsquare matrices,
+etc.
+
+\subsubsection{Performance Issues}
+
+Note that in MPI we would probably want to implement this algorithm 
+using communicators.  For example, this would make broadcasting within a
+block row more convenient and efficient.
+
+Note too that there is a lot of opportunity here to overlap computation
+and communication, which is the best way to solve the communication
+problem.  For instance, we can do the broadcast above at the same time
+as we do the computation.
+
+Obviously this algorithm is best suited to settings in which we have PEs
+in a mesh topology.  This includes hypercubes, though one needs to be a
+little more careful about communications costs there.
+
+\subsection{Shared-Memory Case}
+
+\subsubsection{Example:  Matrix Multiply in OpenMP}
+\label{openmpmatmul}
+
+Since a matrix multiplication in serial form consists of nested loops, a
+natural way to parallelize the operation in OpenMP is through the {\bf
+for} pragma, e.g.
+
+\begin{lstlisting}[numbers=left]
+#pragma omp parallel for
+for (i = 0; i < ncolsa; i++)
+   for (j = 0; i < nrowsb; j++) {
+      sum = 0;
+      for (k = 0; i < ncolsa; i++)
+         sum += a[i][k] * b[k][j];
+   }
+\end{lstlisting}
+
+This would parallelize the outer loop, and we could do so at deeper
+nesting levels if profitable.
+
+\subsubsection{Example:  Matrix Multiply in CUDA}
+\label{cudamatmult}
+
+Given that CUDA tends to work better if we use a large number of
+threads, a natural choice is for each thread to compute one element of
+the product, like this:
+
+\begin{lstlisting}[numbers=left]
+__global__ void matmul(float *ma,float *mb,float *mc,int nrowsa,
+   int ncolsa,int ncolsb, float *total)
+{  int k,i,j; float sum;
+   // find i,j according to thread and block ID
+   sum = 0;
+   for (k = 0; k < ncolsa; k++)
+      sum += a[i*ncolsa+k] * b[k*ncols+j];
+  *total = sum;
+}
+\end{lstlisting}
+
+This should produce a good speedup.  But we can do even better, much
+much better.  
+
+The CUBLAS package includes very finely-tuned algorithms for matrix
+multiplication.  The CUBLAS source code is not public, though, so in
+order to get an idea of how such tuning might be done, let's look at
+Prof.  Richard Edgar's algorithm, which makes use of shared memory.
+(Actually, this may be what CUBLAS uses.)
+
+\begin{lstlisting}[numbers=left]
+__global__ void MultiplyOptimise(const float *A, const float *B, float *C) {
+  // Extract block and thread numbers
+  int bx = blockIdx.x; int by = blockIdx.y;
+  int tx = threadIdx.x; int ty = threadIdx.y;
+  
+  // Index of first A sub-matrix processed by this block
+  int aBegin = dc_wA * BLOCK_SIZE * by;
+  // Index of last A sub-matrix
+  int aEnd = aBegin + dc_wA - 1;
+  // Stepsize of A sub-matrices
+  int aStep = BLOCK_SIZE;
+  // Index of first B sub-matrix
+  // processed by this block
+  int bBegin = BLOCK_SIZE * bx;
+  // Stepsize for B sub-matrices
+  int bStep = BLOCK_SIZE * dc_wB;
+  // Accumulator for this thread
+  float Csub = 0;
+  for(int a = aBegin, b = bBegin; a <= aEnd; a += aStep, b+= bStep) {
+     // Shared memory for sub-matrices
+     __shared__ float As[BLOCK_SIZE][BLOCK_SIZE];
+     __shared__ float Bs[BLOCK_SIZE][BLOCK_SIZE];
+     // Load matrices from global memory into shared memory
+     // Each thread loads one element of each sub-matrix
+     As[ty][tx] = A[a + (dc_wA * ty) + tx];
+     Bs[ty][tx] = B[b + (dc_wB * ty) + tx];
+     // Synchronise to make sure load is complete
+     __syncthreads();
+     // Perform multiplication on sub-matrices
+     // Each thread computes one element of the C sub-matrix
+     for( int k = 0; k < BLOCK_SIZE; k++ ) {
+        Csub += As[ty][k] * Bs[k][tx];
+     }
+    // Synchronise again
+    __syncthreads();
+   }
+   // Write the C sub-matrix back to global memory
+   // Each thread writes one element
+   int c = (dc_wB * BLOCK_SIZE * by) + (BLOCK_SIZE*bx);
+   C[c + (dc_wB*ty) + tx] = Csub;
+}
+\end{lstlisting}
+
+Here are the relevant portions of the calling code, including defined
+constants giving the number of columns (``width'') of the multiplier
+matrix and the number of rows (``height'') of the multiplicand:
+
+\begin{lstlisting}[numbers=left]
+#define BLOCK_SIZE 16
+...
+__constant__ int dc_wA;
+__constant__ int dc_wB;
+...
+// Sizes must be multiples of BLOCK_SIZE
+dim3 threads(BLOCK_SIZE,BLOCK_SIZE);
+dim3 grid(wB/BLOCK_SIZE,hA/BLOCK_SIZE);
+MultiplySimple<<<grid,threads>>>(d_A, d_B, d_C);
+...
+\end{lstlisting}
+
+(Note the alternative way to configure threads, using the functions {\bf
+threads()} and {\bf grid()}.)
+
+Here the the term ``block'' in the defined value {\bf BLOCK\_SIZE}
+refers both to blocks of threads and the partitioning of matrices.
+In other words, a thread block consists of 256 threads, to be thought of
+as a 16x16 ``array'' of threads, and each matrix is partitioned into
+submatrices of size 16x16.
+
+In addition, in terms of grid configuration, there is again a one-to-one
+correspondence between thread blocks and submatrices.  Each submatrix of
+the product matrix C will correspond to, and will be computed by, one
+block in the grid.
+
+We are computing the matrix product C = AB.  Denote the elements of A by
+$a_{ij}$ for the element in row i, column j, and do the same for B and
+C.  Row-major storage is used.
+
+Each thread will compute one element of C, i.e. one $c_{ij}$.  It will
+do so in the usual way, by multiplying column j of B by row i of A.
+However, the key issue is how this is done in concert with the other
+threads, and the timing of what portions of A and B are in shared memory
+at various times.  
+
+Concerning the latter, note the code
+
+\begin{lstlisting}[numbers=left]
+for(int a = aBegin, b = bBegin; a <= aEnd; a += aStep, b+= bStep) {
+   // Shared memory for sub-matrices
+   __shared__ float As[BLOCK_SIZE][BLOCK_SIZE];
+   __shared__ float Bs[BLOCK_SIZE][BLOCK_SIZE];
+   // Load matrices from global memory into shared memory
+   // Each thread loads one element of each sub-matrix
+   As[ty][tx] = A[a + (dc_wA * ty) + tx];
+   Bs[ty][tx] = B[b + (dc_wB * ty) + tx];
+\end{lstlisting}
+
+Here we loop across a row of submatrices of A, and a column of
+submatrices of B, calculating one submatrix of C.  In each iteration of
+the loop, we bring into shared memory a new submatrix of A and a new one
+of B.  Note how even this copying from device global memory to device
+shared memory is shared among the threads.  
+
+As an example, suppose
+
+\begin{equation}
+A =
+\left (
+\begin{array}{cccccc}
+1 & 2 & 3 & 4 & 5 & 6 \\
+7 & 8 & 9 & 10 & 11 & 12 \\
+\end{array}
+\right ) 
+\end{equation}
+
+and
+
+\begin{equation}
+B =
+\left (
+\begin{array}{cccc}
+1 & 2 & 3 & 4  \\
+5 & 6 & 7 & 8  \\
+9 & 10 & 11 & 12  \\
+13 & 14 & 15 & 16  \\
+17 & 18 & 19 & 20  \\
+21 & 22 & 23 & 24  \\
+\end{array}
+\right ) 
+\end{equation}
+
+Further suppose that {\bf BLOCK\_SIZE} is 2.  That's too small for good
+efficiency---giving only four threads per block rather than 256---but
+it's good for the purposes of illustration.  
+
+Let's see what happens when we compute $C_{00}$, the 2x2 submatrix of
+C's upper-left corner.  Due to the fact that partitioned matrices
+multiply ``just like numbers,'' we have
+
+\begin{eqnarray}
+C_{00} &=& A_{00} B_{00} + A_{01} B_{10} + A_{02} B_{20} \\
+&=& 
+\left (
+\begin{array}{cc}
+1 & 2 \\
+7 & 8 \\
+\end{array}
+\right )
+\left (
+\begin{array}{cc}
+1 & 2 \\
+5 & 6 \\
+\end{array}
+\right ) + ...
+\end{eqnarray}
+
+Now, all this will be handled by thread block number (0,0), i.e. the
+block whose X and Y ``coordinates'' are both 0.  In the first iteration
+of the loop, $A_{11}$ and $B_{11}$ are copied to shared memory for that
+block, then in the next iteration, $A_{12}$ and $B_{21}$ are brought in,
+and so on.
+
+Consider what is happening with thread number (1,0) within that block.
+Remember, its ultimate goal is to compute $c_{21}$ (adjusting for the
+fact that in math, matrix subscripts start at 1).  In the first
+iteration, this thread is computing
+
+\begin{equation}
+\left (
+\begin{array}{cc}
+1 & 2\\
+\end{array}
+\right )
+\left (
+\begin{array}{c}
+1 \\
+5 \\
+\end{array}
+\right )
+= 11
+\end{equation}
+
+It saves that 11 in its running total {\bf Csub}, eventually writing it
+to the corresponding element of C:
+
+\begin{lstlisting}
+int c = (dc_wB * BLOCK_SIZE * by) + (BLOCK_SIZE*bx);
+C[c + (dc_wB*ty) + tx] = Csub;
+\end{lstlisting}
+
+Professor Edgar found that use of shared device memory resulted a huge
+improvement, extending the original speedup of 20X to 500X!
+
+\subsection{R Snow}
+\label{snowmult}
+
+Section \ref{snowintro} showed how to parallelize a matrix-vector
+product computation in {\bf snow}, by breaking the matrix rows into
+chunks, and then exploiting the tiling properties of matrices.
+Computation of matrix-matrix products can be done in the same way.
+
+\subsection{R Interfaces to GPUs}
+
+The most widely used of these is probability the {\bf gputools} library.
+It includes various matrix routines, including {\bf gpuMatMult()} for
+matrix multiplication.
+
+\section{Finding Powers of Matrices}
+\label{matpow}
+
+In some applications, we are interested not just in multiplying two
+matrices, but rather in multiplying a matrix by itself, many times.
+
+\subsection{Example:  Graph Connectedness}
+
+Let n denote the number of vertices in the graph.  As before, define the
+graph's \textbf{adjacency matrix} A to be the n x n matrix whose element
+(i,j) is equal to 1 if there is an edge connecting vertices i an j (i.e.
+i and j are ``adjacent''), and 0 otherwise.  
+
+Our ultimate goal here will be to compute the corresponding
+\textbf{reachability matrix} $R^{(k)}$ has its (i,j) element equal to 1
+if there is some path from i to j taking k or fewer steps, and 0
+otherwise.  (Note that the notation ``(k)'' here is a superscript, not
+an exponent.)  We would especially like to compute R, whose elements
+indicate whether one can {\it ever} reach one vertex starting at
+another. In particular, we may be interested in determining whether the
+graph is {\bf connected}, meaning that every vertex eventually leads to
+every other vertex.
+
+Toward that end, consider the matrix
+
+\begin{equation}
+\left (
+\begin{array}{rrrr}
+0 & 1 & 0 & 0 \\
+1 & 0 & 0 & 1 \\
+0 & 1 & 0 & 1 \\
+1 & 1 & 1 & 0 \\
+\end{array}
+\right )
+\end{equation}
+
+Let's take our row/column numbering convention to start at 1, not 0.
+
+Let's ask the question, Can we get from vertex 3 to vertex 1 in two
+steps?  The answer is yes; indeed, there are two such paths:
+
+\begin{equation}
+3 \rightarrow 2 \rightarrow 1
+\end{equation}
+
+\begin{equation}
+3 \rightarrow 4 \rightarrow 1
+\end{equation}
+
+If we were to answer this kind of question systematically, say for the
+number of two-step paths from i to j, we would evaluate the following
+boolean expression:
+
+\begin{equation}
+p(i \rightarrow 1 \rightarrow j) +
+p(i \rightarrow 2 \rightarrow j) +
+p(i \rightarrow 3 \rightarrow j) +
+p(i \rightarrow 4 \rightarrow j) 
+\end{equation}
+
+where $p()$ is equal to 1 if the postulated path exists, 0 if not.
+
+But observe that
+
+\begin{equation}
+p(i \rightarrow k \rightarrow j) = a_{ik} \cdot a_{kj}
+\end{equation}
+
+Thus the number of paths for a general $n \times n$ matrix A from vertex
+i to vertex j is
+
+\begin{equation}
+\sum_{i=1}^n a_{ik} \cdot a_{kj}
+\end{equation}
+
+But this is the the (i,j) element of $A^2$!  Moreover, this says that
+$R^{(2)} = b(A^2)$, where {\bf b()} changes nonzero elements of a matrix
+to 1s, and retains the original 0s.
+
+In general:
+
+\begin{theorem}
+Suppose A is the adjacency matrix A for a graph.  Then
+
+\begin{itemize}
+
+\item [(a)] The number of r-step paths from i to j is the (i,j) element of
+$A^r$.  
+
+\item [(b)]  
+
+\begin{equation}
+R^{(k)} = b(A^k)
+\end{equation}
+
+\item [(c)]  Since the longest possible distinct path has length n-1, we
+have that the graph is connected if and only if each of the matrices
+$R^{(1)},...,R^{(n-1)}$ has all of its off-diagonal elements equal to 1.
+
+\item [(d)] Suppose the graph is undirected.  Then {\bf cycles} are
+possible, so we can keep coming back to a vertex.  Thus the graph is
+connected if and only if {\it some} matrix among 
+$R^{(1)},...,R^{(n-1)}$ has all of its off-diagonal elements equal to 1.
+
+\end{itemize}
+
+\end{theorem}
+
+So, the original graph connectivity problem reduces to a matrix problem.
+And (d) is especially interesting, as it means that if we do manage to
+find some $R^{(k)}$ that consists of all 1s (off the diagonal), our
+computation is done.
+
+\subsection{Example:  Fibonacci Numbers}
+
+The basic problem is well known: Find the Fibonacci numbers $f_n$, where 
+
+\begin{equation}
+\label{fibinit}
+f_0 = f_1 = 1
+\end{equation}
+
+and
+
+\begin{equation}
+\label{fib}
+f_n = f_{n-1} + f_{n-2}, ~ n > 1
+\end{equation}
+
+The point is that (\ref{fib}) can be couched in matrix terms as
+
+\begin{equation}
+\label{recurs}
+\left (
+\begin{array}{c}
+f_{n+1} \\
+f_n
+\end{array} 
+\right ) 
+=
+A 
+\left (
+\begin{array}{c}
+f_n \\
+f_{n-1}
+\end{array} 
+\right ) 
+\end{equation}
+
+where
+
+\begin{equation}
+A = 
+\left (
+\begin{array}{rr}
+1 & 1 \\
+1 & 0
+\end{array} 
+\right ) 
+\end{equation}
+
+Given the initial conditions (\ref{fibinit}) and (\ref{recurs}), we 
+have
+
+\begin{equation}
+\left (
+\begin{array}{c}
+f_{n+1} \\
+f_n
+\end{array} 
+\right ) 
+=
+A^{n-1} 
+\left (
+\begin{array}{c}
+1 \\
+1
+\end{array} 
+\right )
+\end{equation}
+
+In other words, our problem reduces to one of finding the powers
+$A, A^2,...,A^{n-1}$. 
+
+\subsection{Example:  Matrix Inversion}
+
+Many applications make use of $A^{-1}$ for an n x n square matrix A.  In
+many cases, it is not computed directly, but here we address methods for
+direct computation.
+
+We could use the methods of Section \ref{solvelin} to find matrix
+inverses, but there is alos a power series method.
+
+Recall that for numbers x that are smaller than 1 in absolute value,
+
+\begin{equation}
+\frac{1}{1-x} = 1 + x + x^2 + ...
+\end{equation}
+
+In algebraic terms, this would be that for an n x n matrix C,
+
+\begin{equation}
+(I - C)^{-1} = I + C + C^2 + ...
+\end{equation}
+
+This can be shown to converge if 
+
+\begin{equation}
+\label{maxc}
+\max_{i,j} |c_{ij}| < 1
+\end{equation}
+
+To invert our matrix A, then, we can set C = I - A, giving us
+
+\begin{equation}
+A^{-1} = (I - C)^{-1} = I + C + C^2 + ... =
+I + (I-A) + (I-A)^2 + ... 
+\end{equation}
+
+To meet the convergence condition, we could set $\tilde{A} = dA$, where
+d is small enough so that (\ref{maxc}) holds for $I - \tilde{A}$.  This
+will be possible, if all the elements of A are nonnegative.  We then
+find the inverse of dA, and in the end multiply by d to get the inverse
+of A.
+
+\subsection{Parallel Computation}
+
+So, how can we speed up the computation of matrix powers?
+
+First, there is an important trick, useable even in the nonparallel
+case.  Suppose we need to find only a single power, say $A^{32}$.  We
+could do 31 multiplications.  But a much faster approach would be to
+first calculate $A^2$, then square that result to get $A^4$, then square
+it to get $A^8$ and so on.  That would get us $A^{32}$ by applying a
+matrix multiplication algorithm only five times, instead of 31.
+
+Now what if we need to find all powers, in certain range?  Of course we
+can use the methods of Section \ref{parmatmult}, but actually we can do
+a bit better on some platforms, by exploiting the fact that both the
+multiplier and multiplicand are the same matrix, as follows:
+
+Consider a situation in which we are using MPI, CUDA or {\bf snow}, and
+we do matrix multiplication by some fixed tiling, say that of Section
+\ref{snowmult}.  Then instead of having the workers return their section
+of the product to the manager, just {\it keep those sections at the
+workers}.  Because they are always multiplying by the same matrix, they
+can reuse that data, eliminating the large overhead of repeatedly
+shipping it back and forth between the manager and the workers.
+
+\section{Solving Systems of Linear Equations}
+\label{solvelin}
+
+Suppose we have a system of equations
+
+\begin{equation}
+\label{linsyst}
+a_{i0} x_0 + ... + a_{i,n-1} x_{n-1} = b_i, i = 0,1,...,n-1,
+\end{equation}
+
+where the $x_i$ are the unknowns to be solved for.
+
+As you know, this system can be represented compactly as 
+
+\begin{equation}
+\label{lin}
+Ax = b,
+\end{equation}
+
+where A is n x n and x and b is n x 1.
+
+\subsection{Gaussian Elimination}
+\label{gauss}
+
+Form the n x (n+1) matrix C = (A $|$ b) by appending the column vector b
+to the right of A.  (It may be advantageous to add padding on the
+right of b.)
+
+Then we work on the rows of C, with the pseudocode for the sequential
+case in the most basic version being
+
+\begin{lstlisting}[numbers=left]
+for ii = 0 to n-1
+   divide row ii by c[i][i]
+   for r = 0 to n-1, r != i  
+      replace row r by row r - c[r][ii] times row ii
+\end{lstlisting}
+
+In the divide operation in the above pseudocode, $c_{ii}$ might be 0, or
+close to 0.  In that case, a {\bf pivoting} operation is performed (not
+shown in the pseudocode):  that row is first swapped with another one
+further down. 
+
+This transforms C to {\bf reduced row echelon form}, in which A is now
+the identity matrix I and b is now our solution vector x.
+
+A variation is to transform only to {\bf row echelon form}.  This means
+that C ends up in upper triangular form, with all the elements $c_{ij}$
+with $i > j$ being 0, and with all diagonal elements being equal to 1.
+Here is the pseudocode:
+
+\begin{lstlisting}[numbers=left]
+for ii = 0 to n-1
+   divide row ii by c[i][i]
+   for r = ii+1 to n-1  // vacuous if r = n-1
+      replace row r by row r - c[r][ii] times row ii
+\end{lstlisting}
+
+This corresponds to a new set of equations,
+
+\begin{eqnarray*}
+c_{00} x_0 +c_{11} x_1 + c_{22} x_2 + ... + c_{0,n-1} x_{n-1} &=& b_0  \\ 
+c_{11} x_1 + c_{22} x_2 + ... + c_{1,n-1} x_{n-1} &=& b_1  \\ 
+c_{22} x_2 + ... + c_{2,n-1} x_{n-1} &=& b_2  \\ 
+... & & \\
+c_{n-1,n-1} x_{n-1} &=& b_{n-1} 
+\end{eqnarray*}
+
+We then find the $x_i$ via {\bf back substitution}:
+
+\begin{lstlisting}[numbers=left]
+x[n-1] = b[n-1] / c[n-1,n-1]
+for i = n-2 downto 0
+   x[i] = (b[i] - c[i][n-1] * x[n-1] - ... - c[i][i+1] * x[i+1]) / c[i][i]
+\end{lstlisting}
+
+\subsection{Example:  Gaussian Elimination in CUDA}
+
+Here's CUDA code for the reduced row echelon form version, suitable for
+a not-extremely-large matrix:
+
+\begin{lstlisting}[numbers=left]
+// linear index for matrix element at row i, column j, in an m-column
+// matrix
+__device__ int onedim(int i,int j,int m) {return i*m+j;}
+
+// replace u by c* u; vector of length m
+__device__ void cvec(float *u, int m, float c)
+{  for (int i = 0; i < m; i++) u[i] = c * u[i];  }
+
+// multiply the vector u of length m by the constant c (not changing u)
+// and add the result to v
+__device__ void vplscu(float *u, float *v, int m, float c)
+{  for (int i = 0; i < m; i++) v[i] += c * u[i];  }
+
+// copy the vector u of length m to v
+__device__ void cpuv(float *u, float *v, int m)
+{  for (int i = 0; i < m; i++) v[i] = u[i];  }
+
+// solve matrix equation Ax = b; straight Gaussian elimination, no
+// pivoting etc.; the matrix ab is (A|b), n rows; ab is destroyed, with
+// x placed in the last column; one block, with thread i handling row i
+__global__ void gauss(float *ab, int n)
+{  int i,n1=n+1,abii,abme;
+   extern __shared__ float iirow[];
+   int me = threadIdx.x;
+   for (i = 0; i < n; i++) {  
+      if (i == me) {
+         abii = onedim(i,i,n1);
+         cvec(&ab[abii],n1-i,1/ab[abii]);
+         cpuv(&ab[abii],iirow,n1-i);
+      }
+      __syncthreads();
+      if (i != me) {
+         abme = onedim(me,i,n1);
+         vplscu(iirow,&ab[abme],n1-i,-ab[abme]);
+      }
+      __syncthreads();
+   }
+}
+\end{lstlisting}
+
+Here we have one thread for each row, and are using just one block, so
+as to avoid interblock synchronization problems and to easily use shared
+memory.  Concerning the latter, note that since the pivot row, {\bf
+iirow}, is read many times, it makes sense to put it in shared memory.
+
+Needless to say, the restriction to one block is quite significant.
+With a 512-thread limit per block, this would limit us to 512x512
+matrices.  But it's even worse than that---if shared memory is only 4K
+in size, in single precision that would mean something like 30x30
+matrices!  We could go to multiple blocks, at the cost of incurring
+synchronization delays coming from repeated kernel calls.
+
+In a row echelon version of the code, we could have dynamic assignment
+of rows to threads, but still would eventually have load balancing
+issues.
+
+\subsection{The Jacobi Algorithm}
+
+One can rewrite (\ref{linsyst}) as
+
+\begin{equation}
+\label{jacob}
+x_i = \frac{1}{a_{ii}}
+[b_i -
+(a_{i0} x_0 + ...+ a_{i,i-1} x_{i-1} +
+a_{i,i+1} x_{i+1} + ...
++ a_{i,n-1} x_{n-1})] , i = 0,1,...,n-1.
+\end{equation}
+
+This suggests a natural iterative algorithm for solving the equations.
+We start with our guess being, say, $x_i = b_i$ for all i.  At our
+k$^{th}$ iteration, we find our (k+1)$^{st}$ guess by plugging in our
+k$^{th}$ guess into the right-hand side of (\ref{jacob}).  We keep
+iterating until the difference between successive guesses is small
+enough to indicate convergence.
+
+This algorithm is guaranteed to converge if each diagonal element of A
+is larger in absolute value than the sum of the absolute values of the
+other elements in its row.
+
+Parallelization of this algorithm is easy:  Just assign each process to
+handle a section of $x = (x_0,x_1,...,x_{n-1})$.  Note that this means that
+each process must make sure that all other processes get the new value
+of its section after every iteration.
+
+Note too that in matrix terms (\ref{jacob}) can be expressed as 
+
+\begin{equation}
+\label{jacmat}
+x^{(k+1)} = D^{-1} (b - O x^{(k)}) 
+\end{equation}
+
+where D is the diagonal matrix consisting of the diagonal elements of A
+(so its inverse is just the diagonal matrix consisting of the
+reciprocals of those elements),
+O is the square matrix obtained by replacing A's diagonal elements by
+0s, and $x^{(i)}$ is our guess for x in the i$^{th}$iteration.  This
+reduces the problem to one of matrix multiplication, and thus we can
+parallelize the Jacobi algorithm by utilizing a method for doing
+parallel matrix multiplication.
+
+\subsection{Example: OpenMP Implementation of the Jacobi Algorithm}
+\label{ompjacobi}
+
+OpenMP code for Jacobi is straightforward:
+
+\begin{lstlisting}[numbers=left]
+#include <omp.h>
+
+// partitions s..e into nc chunks, placing the ith in first and last (i
+// = 0,...,nc-1)
+void chunker(int s, int e, int nc, int i, int *first, int *last)
+{  int chunksize = (e-s+1) / nc;
+   *first = s + i * chunksize;
+   if (i < nc-1) *last = *first + chunksize - 1;
+   else *last = e;
+}
+
+// returns the "dot product" of vectors u and v
+float innerprod(float *u, float *v, int n)
+{  float sum = 0.0; int i;
+   for (i = 0; i < n; i++)
+      sum += u[i] * v[i];
+   return sum;
+} 
+
+// solves AX = Y, A nxn; stops iteration when total change is < n*eps
+void jacobi(float *a, float *x, float *y, int n, float eps)
+{
+   float *oldx = malloc(n*sizeof(float));
+   float se;
+   #pragma omp parallel
+   {  int i;
+      int thn = omp_get_thread_num();
+      int nth = omp_get_num_threads();
+      int first,last;
+      chunker(0,n-1,nth,thn,&first,&last);
+      for (i = first; i <= last; i++) oldx[i] = x[i] = 1.0;
+      float tmp;
+      while (1) {
+         for (i = first; i <= last; i++) {
+            tmp = innerprod(&a[n*i],oldx,n);
+            tmp -= a[n*i+i] * oldx[i];
+            x[i] = (y[i] - tmp) / a[n*i+i];
+         }
+         #pragma omp barrier
+         #pragma omp for reduction(+:se)
+         for (i = first; i <= last; i++) 
+            se += abs(x[i]-oldx[i]);
+         #pragma omp barrier
+         if (se < n*eps) break;
+         for (i = first; i <= last; i++) 
+            oldx[i] = x[i];
+      }
+   }
+}
+\end{lstlisting}
+
+Note the use of the OpenMP {\bf reduction} clause.
+
+\subsection{Example:  R/gputools Implementation of Jacobi}
+
+Here's the R code, using {\bf gputools}:
+
+\begin{lstlisting}[numbers=left]
+library(gputools)
+
+jcb <- function(a,b,eps) {
+   n <- length(b)
+   d <- diag(a)  # a vector, not a matrix
+   tmp <- diag(d)  # a matrix, not a vector
+   o <- a - diag(d)
+   di <- 1/d
+   x <- b  # initial guess, could be better
+   repeat {
+      oldx <- x
+      tmp <- gpumatmult(o,x)
+      tmp <- b - tmp
+      x <- di * tmp  # elementwise multiplication
+      if (sum(abs(x-oldx)) < n * eps) return(x)
+   }
+}
+\end{lstlisting}
+
+\section{Eigenvalues and Eigenvectors}
+\label{eigen}
+
+With the popularity of document search (Web search, text mining etc.),
+eigenanalysis has become much more broadly used.  Given the size of the
+problems, again parallel computation is needed.
+This can become quite involved, with many complicated methods having
+been developed.
+
+\subsection{The Power Method}
+
+One of the simplest methods is the {\bf power method}.  Consider an nxn
+matrix A, with eigenvalues $\lambda_1,...,\lambda_n$, where the labeling
+is such that $|\lambda_1| \geq |\lambda_2| \geq ...  \geq |\lambda_n|$.
+We'll assume here that A is a symmetric matrix, which it is for instance
+in statistical applications (Section \ref{pca}).  That implies that the
+eigenvalues of A are real, and that the eigenvectors are orthogonal to
+each other.
+
+Start with some nonzero vector x, and define the k$^{th}$ iterate by
+
+\begin{equation}
+\label{xkeqn}
+x^{(k)} = \frac{A^k x}{\parallel A^k x \parallel}
+\end{equation}
+
+Under mild conditions, $x^{(k)}$ converges to an eigenvector $v_1$
+corresponding to $\lambda_1$.  Moreover, the quantities
+$(Ax^{(k)})' x^{(k)}$ converge to $\lambda_1$.
+
+This method is reportedly used in Google's PageRank algorithm, which is
+only concerned with the largest eigenvalue/eigenvector.  But what if you
+want more?
+
+Consider now the matrix
+
+\begin{equation}
+B = A - \lambda_1 v_1 v_1'
+\end{equation}
+
+where we've now scaled $v_1$ to have length 1.
+
+Then
+
+\begin{eqnarray}
+B v_1 &=& A v_1 - \lambda_1 v1 (v_1' v_1) \\
+&=&
+\lambda_1 v_1 - \lambda_1 v1 (1) \\
+&=& 0
+\end{eqnarray}
+
+and for $i > 0$,
+
+\begin{eqnarray}
+B v_i &=& A v_i - \lambda_1 v1 (v_1' v_i) \\
+&=& \lambda_i v_i - \lambda_1 v1 (0) \\
+&=& \lambda_i v_i 
+\end{eqnarray}
+
+In other words, the eigenvalues of B are $\lambda_2,...,\lambda_n,0$.
+So we can now apply the same procedure to B to get $\lambda_2$ and
+$v_2$, and iterate for the rest.
+
+\subsection{Parallel Computation}
+
+To use the power method in parallel, note that this is again a situation
+in which we wish to compute powers of matrices.  However, there is also
+scaling involved, as seen in (\ref{xkeqn}).  We may wish to try the
+``log method'' of Section \ref{matpow}, with scaling done occasionally.
+
+The CULA library for CUDA, mentioned earlier, includes routines for
+finding the {\bf singular value decomposition} of a matrix, thus
+providing the eigenvectors.\footnote{The term {\it singular value} is a
+synonym for {\it eigenvalue}.}  The R package {\bf gputools} has an
+interface to the SVD routine in CULA.
+
+\section{Sparse Matrices}
+\label{sparse}
+
+As mentioned earlier, in many parallel processing applications of linear
+algebra, the matrices can be huge, even having millions of rows or
+columns.  However, in many such cases, most of the matrix consists of
+0s.  In an effort to save memory, one can store such matrices in
+compressed form, storing only the nonzero elements. 
+
+Sparse matrices roughly fall into two categories.  In the first
+category, the matrices all have 0s at the same known positions.  For
+instance, in {\bf tridiagonal} matrices, the only nonzero elements are
+either on the diagonal or on subdiagonals just below or above the
+diagonal, and all other elements are guaranteed to be 0, such as  
+
+\begin{equation}
+\label{amat}
+\left (
+\begin{array}{rrrrr}
+2 & 0 & 0 & 0 & 0 \\
+1 & 1 & 8 & 0 & 0 \\
+0 & 1 & 5 & 8 & 0 \\
+0 & 0 & 0 & 8 & 8 \\
+0 & 0 & 0 & 3 & 5 \\
+\end{array} 
+\right ) 
+\end{equation}
+
+Code to deal with such matrices can then access the nonzero elements
+based on this knowledge.
+
+In the second category, each matrix that our code handles will typically
+have its nonzero matrices in different, ``random,'' positions.  A
+number of methods have been developed for storing amorphous sparse
+matrices, such as the Compressed Sparse Row format, which we'll code in
+this C {\bf struct}, representing an mxn matrix A, with k nonzero
+entries:
+
+\begin{lstlisting}[numbers=left]
+struct {
+   int m,n;  // numbers of rows and columns of A
+   float *avals;  // the nonzero values of A, in row-major order; length k
+   int *cols;  // avals[i] is in column cols[i] in A; length k
+   int *rowplaces;  // rowplaces[i] is the index in avals for the 1st
+                    // nonzero element of row i in A (but last element
+                    // is k); length m+1
+}
+\end{lstlisting}
+
+For the matrix in (\ref{amat}) (if we were not to exploit its
+tridiagonal nature, and just treat it as amorphous):
+
+\begin{itemize}
+
+\item {\bf m,n:} 5,5
+
+\item {\bf avals:} 2,1,1,8,1,5,8,8,8,3,5
+
+\item {\bf cols:} 0,0,1,2,1,2,3,3,4,3,4
+
+\item {\bf rowplaces:} 0,2,4,6,9,11
+
+\end{itemize}
+
+For instance, look at the 4 in {\bf rowplaces}.  It's at position 2 in
+that array, so it says that element 4 in {\bf avals}---the third 1---is
+the first nonzero element in row 2 of A.  Look at the matrix, and you'll
+see this is true.
+
+% The array {\bf rowplaces} tells us which parts of {\bf avals} go into
+% which rows of A:
+% 
+% \begin{tabular}{|r|r|}
+% \hline
+% row in A & indices in {\bf rowplaces} \\ \hline
+% 0 & 0-1 \\ \hline
+% 1 & 2-3 \\ \hline
+% 2 & 4-5 \\ \hline
+% 3 & 6-8 \\ \hline
+% 4 & 9-10 \\ \hline
+% \end{tabular}
+
+Parallelizing operations for sparse matrices can be done in the usual
+manner, e.g. breaking the rows of A into chunks.  Note, though, that
+there could be a load-balance issue, again addressable in ways we've
+used before.
+
+\section{Libraries}
+
+Of course, remember that CUDA provides some excellent matrix-operation
+routines, in CUBLAS.  There is also the CUSP library for sparse matrices
+(i.e. those with a lot of 0s).  Note too the CULA library (not developed
+by NVIDIA, but using CUDA).
+
+More general (i.e. non-CUDA) parallel libraries for linear algebra
+include ScalaPACK and PLAPACK.
+

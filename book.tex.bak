@@ -1,0 +1,239 @@
+\documentclass[twoside,nofonts,fancyhdr, 12.5pt]{ctexbook}
+
+\usepackage{amsmath}
+\newtheorem{theorem}{Theorem}
+\newcommand{\BlackBox}{\rule{1.5ex}{1.5ex}}  % end of proof
+\newenvironment{proof}{\par\noindent{\bf Proof\
+}}{\hfill\BlackBox\\[2mm]}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{axiom}[theorem]{Axiom}
+
+\usepackage{graphicx,booktabs,xcolor,color}
+\usepackage{listings}
+\usepackage{verbatim}
+\usepackage{fancybox,fancyhdr}
+\usepackage{xeCJK}
+\usepackage{relsize}
+\usepackage[a4paper,marginparsep=6mm,marginparwidth=6mm,footskip=3.5pc,centering]{geometry}
+
+
+\usepackage{subfigure}
+\usepackage{tabularx}
+\usepackage[toc,page]{appendix}
+\usepackage{titlesec}
+\usepackage[font=small,labelfont=bf,skip=0pt, aboveskip=0pt, belowskip=0pt,labelsep=space]{caption}
+
+\setlength{\oddsidemargin}{0.0in}
+\setlength{\evensidemargin}{0.0in}
+\setlength{\topmargin}{0.0in}
+\setlength{\topskip}{0.5in}
+\setlength{\headheight}{0.5in}
+\setlength{\headsep}{0in}
+\setlength{\textwidth}{6.5in}
+\setlength{\textheight}{8.0in}
+\setlength{\parindent}{0in}
+\setlength{\parskip}{0.1in}
+
+\usepackage{hyperref}
+\usepackage[figure,table]{hypcap}
+\usepackage{natbib}
+\setcitestyle{authoryear,round,aysep={,},yysep={,},citesep={;}}
+\usepackage{listings}
+%代码框全局设置
+\definecolor{shadecolor}{rgb}{0.95,0.95,0.95}
+\lstset{xrightmargin=0pt,
+    basicstyle=\ttfamily,
+    commentstyle=\ttfamily,
+    numbers=left,
+    numberstyle=\tiny,
+    backgroundcolor=\color{shadecolor},
+    columns=fullflexible,
+    showstringspaces=false,
+    breaklines=true,
+    framerule=0.7pt,
+    frameround=tttt,
+    captionpos=b,
+    xleftmargin=1em,
+    xrightmargin=1em,
+    aboveskip=1em,
+}
+\renewcommand{\lstlistingname}{代码}
+
+
+\CTEXsetup[number={\arabic{chapter}}]{chapter}
+\CTEXsetup[format={\Large\bfseries\raggedright}]{section}
+%%% 空白页无页眉
+\def\cleardoublepage{\clearpage\if@twoside \ifodd\c@page\else
+\thispagestyle{empty}%
+\hbox{}\newpage\if@twocolumn\hbox{}\newpage\fi\fi\fi}
+
+%\titleformat{\chapter}[display]{\normalfont\huge\bfseries\center}{\chaptertitlename\ \thechapter}{10pt}{\Huge}
+%\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+%\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+%\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
+%\titleformat{\paragraph}[runin]{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
+%\titleformat{\subparagraph}[runin]{\normalfont\normalsize\bfseries}{\thesubparagraph}{1em}{}
+%下面的命令用于调节 标题与上下文，段落之间间距命令
+\titlespacing*{\chapter} {0pt}{50pt}{40pt}
+\titlespacing*{\section} {0pt}{3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex}
+\titlespacing*{\subsection} {0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+\titlespacing*{\subsubsection}{0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
+%\titlespacing*{\paragraph} {0pt}{3.25ex plus 1ex minus .2ex}{1em}
+%\titlespacing*{\subparagraph} {\parindent}{3.25ex plus 1ex minus .2ex}{1em}
+
+\graphicspath{{fig/}}
+\newcommand{\bc}[1]{\textbf{{\color{blue}#1}}}
+\newcommand{\PreserveBackslash}[1]{\let\temp=\\#1\let\\=\temp}
+\newcolumntype{C}[1]{>{\PreserveBackslash\centering}p{#1}}
+\newcolumntype{R}[1]{>{\PreserveBackslash\raggedleft}p{#1}}
+\newcolumntype{L}[1]{>{\PreserveBackslash\raggedright}p{#1}}
+
+
+%% 定义页眉页脚
+\pagestyle{fancy}
+\fancyhf{} %
+\fancyhead[LE,RO]{\bfseries\thepage}
+\fancyhead[CO]{\bfseries \nouppercase{\rightmark}}
+\fancyhead[CE]{\bfseries \nouppercase{\leftmark}}
+\renewcommand{\headrulewidth}{0.5pt}
+\renewcommand{\footrulewidth}{0pt}
+\addtolength{\headheight}{0.5pt} %
+\fancypagestyle{plain}{%
+	\fancyhead{} %
+	\renewcommand{\headrulewidth}{0pt} %
+}
+
+%% 定义破折号、页码边注、行内代码、函数、包格式等
+\def\pzh{\CJKglue\vrule height.885ex depth-0.785ex width2em\CJKglue} %%%破折号
+\usepackage{marginnote}
+%\newcommand{\mbookpage}[1]{\reversemarginpar\marginnote[\fbox{\small{#1}}]{\fbox{\centering\small{#1}}}}
+%\newcommand{\bookpage}[1]{\marginpar{\fbox{\centering\small{#1}}}}
+\newcommand{\bookpage}[1]{\label{#1}}
+\newcommand{\mbookpage}[1]{\label{#1}}
+
+\newcommand{\R}{\textsf{R}}
+
+\newcommand{\pkg}[1]{\textbf{#1}}
+%\newcommand{\pkg}[1]{\textbf{#1}}
+\newcommand{\fun}[1]{\textit{#1}}
+\interfootnotelinepenalty=10000
+%%\renewcommand{\footnote}[1]{\footnote{\mbox{#1}}}
+\def\rcode{\expandafter\lstinline[basicstyle={\ttfamily},breaklines=true]}
+%% 行间代码
+\usepackage{fancyvrb}
+\lstset{escapeinside=`',}
+\RecustomVerbatimEnvironment{Verbatim}{Verbatim}{frame=leftline,numbers=left,
+	rulecolor=\color{lightgray},framerule=4pt,numbersep=3pt,fontsize=\small}
+\fvset{frame=leftline,numbers=left,rulecolor=\color{lightgray},framerule=4pt,
+	numbersep=3pt,fontsize=\small}
+
+%% 处理寡行 http://bbs.ctex.org/viewthread.php?tid=37110	
+\widowpenalty=10000
+\setlength\parskip{0pt}
+\setlength\baselineskip{12pt}	
+	
+
+
+\definecolor{mycolor1}{HTML}{FF6C91}
+\definecolor{mycolor2}{HTML}{00C1A9}
+
+
+%% A simple dot to overcome graphicx limitations
+\newcommand{\lyxdot}{.}
+
+%%%%%%%%%%%%% 列表行距
+\usepackage{enumitem}
+\setlist{itemsep=0.2ex,partopsep=0pt,parsep=0.2ex,topsep=5pt}
+
+
+%%%%%%%%%%%%% 双索引
+\usepackage{makeidx}
+\usepackage{cosmidx}
+\def\tcode{\expandafter\lstinline[basicstyle={},breaklines=true]}
+\makeindex{terms}
+\makeindex{software}
+\makeindex{author}
+\newcommand{\tindex}[2]{\index{terms}{#1@#2}}
+\newcommand{\sindex}[2]{\index{software}{#1@#2}}
+\newcommand{\aindex}[2]{\index{author}{#1@#2}}
+
+%%% 脚注圆圈
+\renewcommand{\thefootnote}{\scriptsize{\textcircled{\tiny{\arabic{footnote}}}}}
+\DeclareGraphicsExtensions{.pdf,.jpg,.png}
+
+%%%%%%% 浮动图形调节
+\usepackage[section]{placeins}
+%\usepackage[below]{placeins}
+
+\renewcommand{\textfraction}{0}
+\renewcommand{\topfraction}{1}
+\renewcommand{\bottomfraction}{0.99}
+\renewcommand{\floatpagefraction}{0.9}
+\makeatletter
+\setlength{\@fptop}{0pt}
+\setlength{\@fpbot}{0pt}
+\makeatother
+
+%%%%%%字体
+\setCJKmainfont[BoldFont={方正黑体_GBK}, ItalicFont={方正楷体_GBK}]{方正书宋_GBK}
+\setCJKsansfont{方正黑体_GBK}
+\setCJKmonofont{方正仿宋_GBK}
+\setCJKfamilyfont{rm}[BoldFont={方正黑体_GBK}, ItalicFont={方正楷体_GBK}]{方正书宋_GBK}
+\setCJKfamilyfont{sf}{方正黑体_GBK}
+\setCJKfamilyfont{tt}{方正仿宋_GBK}
+\setCJKfamilyfont{song}[BoldFont={方正黑体_GBK}]{方正书宋_GBK}
+\setCJKfamilyfont{kai}{方正楷体_GBK}
+\setCJKfamilyfont{hei}{方正黑体_GBK}
+\setCJKfamilyfont{fs}{方正仿宋_GBK}
+%%
+\newcommand{\clearemptydoublepage}{\newpage{\pagestyle{empty}\cleardoublepage}}
+
+\begin{document}
+\thispagestyle{empty}
+\include{./chapter/cover}
+\pagecolor{white}
+
+%\include{./chapter/preface1}
+%\cleardoublepage
+%\include{./chapter/preface2}
+%\cleardoublepage
+%\include{./chapter/acknowledgment}
+
+\cleardoublepage
+\pagenumbering{roman}
+\tableofcontents
+
+% \setlength{\parskip}{1.05ex}
+% \setlength{\baselineskip}{1.5em}
+\newcommand{\dahao}{\fontsize{50pt}{\baselineskip}\selectfont}
+
+\cleardoublepage
+\pagenumbering{arabic}
+\include{./chapter/Intro}
+\include{./chapter/PerfIssues}
+\include{./chapter/SharedMem}
+\include{./chapter/OpenMP}
+\include{./chapter/CUDA}
+\include{./chapter/Thrust}
+\include{./chapter/MsgPassing}
+\include{./chapter/MPI}
+\include{./chapter/hadoop}
+\include{./chapter/R}
+\include{./chapter/Prefix}
+\include{./chapter/Matrix}
+\include{./chapter/Sorting}
+\include{./chapter/Fourier}
+\include{./chapter/Stat}
+\include{./chapter/PyThreads}
+
+\appendix
+\include{./appendix/SystemsTutorial}
+\include{./appendix/MatrixReview}
+\include{./appendix/R5MinIntro}
+\include{./appendix/PyMiniIntro}
+\end{document}

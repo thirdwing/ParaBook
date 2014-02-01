@@ -1,0 +1,378 @@
+\chapter{The Parallel Prefix Problem} 
+\label{chap:prefix}
+
+An operation that arises in a variety of parallel algorithms is that of
+{\it prefix} (or {\it scan}).  In its abstract form, it inputs a
+sequence of objects $(x_0,...,x_{n-1})$, and outputs $(s_0,...,s_{n-1})$, where
+
+\begin{equation}
+\label{scandef}
+\begin{array}{c}
+s_0 = x_0, \\
+s_1 = x_0 \otimes x_1, \\
+..., \\
+s_{n-1} = x_0 \otimes x_1 \otimes ... \otimes x_{n-1}
+\end{array}
+\end{equation}
+
+where $\otimes$ is some associative operator.
+
+That's pretty abstract.  The most concrete example would be that in
+which $\otimes$ is + and the objects are numbers.  The scan of
+(12,5,13) would then be (12,12+5,12+5+13) = (12,17,30).
+
+This is called an {\bf inclusive} scan, in which $x_i$ is included in
+$s_i$.  The {\bf exclusive} version of the above example would be
+(0,12,17).
+
+Prefix scan has become a popular tool in the parallel processing
+community, applicable in a surprising variety of situations.  Various
+examples will arise in succeeding chapters, but we'll present one in the
+next section in order to illustrate the versatility of the prefix
+approach.
+
+\section{Example:  Permutations}
+\label{fibprefix}
+
+Say we have the vector (12,5,13,8,88).  Applying the permutation (2,0)
+would say the old element 0 becomes element 2, the old element 2 becomes
+element 0, and all the rest stay the same.  The result would be
+(13,5,12,8,88).  If we then applied the permutation (1,2,4), it would
+mean that element 1 goes to position 2, 2 goes to 4, and 4 goes to 1,
+with everything else staying put.  Our new vector would then be
+(13,88,5,8,12).
+
+This too can be cast in matrix terms, by representing any permutation as
+a matrix multiplication.  We just apply the permutation to the identity
+matrix I, and then postmultiply the (row) vector by the matrix.  For
+instance, the matrix corresponding to the permutation (1,2,4) is
+
+\begin{equation}
+\left (
+\begin{array}{rrrrr}
+0 & 0 & 1 & 0 & 0 \\
+0 & 1 & 0 & 0 & 0 \\
+1 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 1 & 0 \\
+0 & 0 & 0 & 0 & 1 \\
+\end{array}
+\right )
+\end{equation}
+
+so applying (1,2,4) to (12,5,13,8,88) above can be done as
+
+\begin{equation}
+(12,5,13,8,88)
+\left (
+\begin{array}{rrrrr}
+0 & 0 & 1 & 0 & 0 \\
+0 & 1 & 0 & 0 & 0 \\
+1 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 1 & 0 \\
+0 & 0 & 0 & 0 & 1 \\
+\end{array}
+\right )
+= (13,5,12,8,88)
+\end{equation}
+
+So in terms of (\ref{scandef}), $x_0$ would be the identity matrix,
+$x_i$ for i $>$ 0 would be the i$^{th}$ permutation matrix, and
+$\otimes$ would be matrix multiplication.  
+
+Note, however, that although we've couched the problem in terms of
+matrix multiplication, these are {\it sparse} matrices, i.e. have many
+0s.  Thus a general parallel matrix-multiply routine may not be
+efficient, and special parallel methods for sparse matrices should be
+used (Section \ref{sparse}).
+
+Note that the above example shows that in finding a scan,
+
+\begin{itemize}
+
+\item the elements might be nonscalars
+
+\item the associative operator need not be commutative
+
+\end{itemize}
+
+\section{General Strategies for Parallel Scan Computation}
+\label{genpar}
+
+For the time being, we'll assume we have n threads, i.e. one for each
+datum.  Clearly this condition will often not hold, so we'll extend
+things later.
+
+We'll describe what is known as a {\it data parallel} solution to the
+prefix problem.  
+
+Here's the basic idea, say for n = 8:
+
+{\bf Step 1:}
+
+\begin{eqnarray}
+x_1 &\leftarrow& x_0 + x_1 \\
+x_2 &\leftarrow& x_1 + x_2 \\
+x_3 &\leftarrow& x_2 + x_3 \\
+x_4 &\leftarrow& x_3 + x_4 \\
+x_5 &\leftarrow& x_4 + x_5 \\
+x_6 &\leftarrow& x_5 + x_6 \\
+x_7 &\leftarrow& x_6 + x_7
+\end{eqnarray}
+
+{\bf Step 2:}
+
+\begin{eqnarray}
+x_2 &\leftarrow& x_0 + x_2 \\
+x_3 &\leftarrow& x_1 + x_3 \\
+x_4 &\leftarrow& x_2 + x_4 \\
+x_5 &\leftarrow& x_3 + x_5 \\
+x_6 &\leftarrow& x_4 + x_6 \\
+x_7 &\leftarrow& x_5 + x_7
+\end{eqnarray}
+
+{\bf Step 3:}
+
+\begin{eqnarray}
+x_4 &\leftarrow& x_0 + x_4 \\
+x_5 &\leftarrow& x_1 + x_5 \\
+x_6 &\leftarrow& x_2 + x_6 \\
+x_7 &\leftarrow& x_3 + x_7
+\end{eqnarray}
+
+In Step 1, we look at elements that are 1 apart, then Step 2 considers
+the ones that are 2 apart, then 4 for Step 3.
+
+Why does this work?  Well, consider how the contents of $x_7$ evolve
+over time.  Let $a_i$ be the original $x_i$, i = 0,1,...,n-1.  Then here
+is $x_7$ after the various steps:
+
+\begin{tabular}{|r|r|}
+\hline
+step & contents \\ \hline
+\hline
+1 & $a_6+a_7$ \\ \hline 
+2 & $a_4+a_5+a_6+a_7$ \\ \hline 
+3 & $a_0+a_1+a_2+a_3 + a_4+a_5+a_6+a_7$ \\ \hline 
+\end{tabular}
+
+Similarly, after Step 3, the contents of $x_7$ will be
+$a_0+a_1+a_2+a_3 + a_4+a_5+a_6$ (check it!).   So, in the end, the
+locations of $x_i$ will indeed contain the prefix sums.
+
+For general n, the routing is as follows.  At Step i, each $x_j$ is
+routed both to itself and to $x_{j+2^{i-1}}$, for $j >= 2^{i-1}$.  
+(Some threads, more in each successive step, are idle.)
+
+There will be $log_2 n$ steps, or if n is not a power of 2, case the
+number of steps is $\lfloor log_2 n \rfloor$.
+
+Note two important points:
+
+\begin{itemize}
+
+\item The location $x_i$ appears both as an input and an output in the
+assignment operations above.  In our implementation, we need to take
+care that the location is not written to before its value is read.  One
+way to do this is to set up an auxiliary array $y_i$.  In odd-numbered
+steps, the $y_i$ are written to with the $x_i$ as inputs, and vice versa
+for the even-numbered steps.
+
+\item As noted above, as time goes on, more and more threads are idle.  
+Thus load balancing is poor.
+
+\item Synchronization at each step incurs overhead in a
+multicore/multiprocessr setting.  (Worse for GPU if multiple blocks
+are used).
+
+\end{itemize}
+
+Now, what if n is greater than p, our number of threads?  Let
+Ti denote thread i.  The standard approach is that taken in Section
+\ref{cumulsums}:
+
+\begin{lstlisting}[numbers=left]
+break the array into p blocks
+parallel for i = 0,...,p-1
+   Ti does scan of block i, resulting in Si
+form new array G of rightmost elements of each Si
+do parallel scan of G
+parallel for i = 1,...,p-1
+   Ti adds Gi to each element of block i
+\end{lstlisting}
+
+For example, say we have the array
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+2 25 26 8 50 3 1 11 7 9 29 10
+\end{Verbatim}
+
+and three threads.  We break the data into three sections,
+
+\begin{tabular}{|c|c|c|}
+\hline
+2 25 26 8 &  50 3 1 11 & 7 9 29 10 \\ \hline
+\end{tabular}
+
+and then apply a scan to each section:
+
+\begin{tabular}{|c|c|c|}
+\hline
+2 27 53 61 &  50 53 54 65 & 7 16 45 55 \\ \hline
+\end{tabular}
+
+But we still don't have the scan of the array overall.  That 50, for
+instance, should be 61+50 = 111 and the 53 should be 61+53 = 114.  In
+other words, 61 must be added to that second section, (50,53,54,65), and
+61+65 = 126 must be added to the third section, (7,16,45,55).  This
+then is the last step, yielding
+
+\begin{tabular}{|c|c|c|}
+\hline
+2 27 53 61 &  111 114 115 126 & 133 142 171 181 \\ \hline
+\end{tabular}
+
+Another possible approach would be make n ``fake'' threads FTj.  Each Ti
+plays the role of n/p of the FTj.  The FTj then do the parallel scan as
+at the beginning of this section.  Key point:  Whenever a Ti becomes
+idle, it is assigned to help other Tk.
+
+\section{Implementations}
+\label{prefiximps}
+
+The MPI standard actually includes built-in parallel prefix functions,
+{\bf MPI\_Scan()}.  A number of choices are offered for $\otimes$, such
+as maximum, minimum, sum, product etc.
+
+The Thrust library for CUDA or OpenMP includes functions {\bf
+thrust::inclusive\_scan()} and {\bf thrust::exclusive\_scan()}.
+
+The CUDPP (CUDA Data Parallel Primitives Library) package contains CUDA
+functions for sorting and other operations, many of which are based on
+parallel scan.  See \url{http://gpgpu.org/developer/cudpp} for the
+library code, and a detailed analysis of optimizing parallel prefix in a
+GPU context in the book {\it GPU Gems 3}, available either in bookstores
+or free online at
+\url{http://developer.nvidia.com/object/gpu_gems_home.html}.
+
+\section{Example:  Parallel Prefix, Run-Length Decoding in OpenMP}  
+
+Here an OpenMP implementation of the approach described at the end of
+Section \ref{genpar}, for addition:
+
+\begin{lstlisting}[numbers=left]
+#include <omp.h>
+
+// calculates prefix sums sequentially on u, in-place, where u is an 
+// m-element array
+void seqprfsum(int *u,int m)
+{  int i,s=u[0];
+   for (i = 1; i < m; i++) {
+      u[i] += s;
+      s = u[i];
+   }
+}
+
+// OMP example, calculating prefix sums in parallel on the n-element
+// array x, in-place; for simplicity, assume that n is divisible by the
+// number of threads; z is for intermediate storage, an array with length
+// equal to the number of threads; x and z point to global arrays
+void parprfsum(int *x, int n, int *z)
+{
+   #pragma omp parallel
+   {  int i,j,me = omp_get_thread_num(),
+          nth = omp_get_num_threads(),
+          chunksize = n / nth,
+          start = me * chunksize;
+      seqprfsum(&x[start],chunksize);
+      #pragma omp barrier
+      #pragma omp single
+      {
+      for (i = 0; i < nth-1; i++)
+         z[i] = x[(i+1)*chunksize - 1];
+      seqprfsum(z,nth-1);
+      }
+      if (me > 0) {
+         for (j = start; j < start + chunksize; j++) {
+            x[j] += z[me - 1];
+         }
+      }
+   }
+}
+\end{lstlisting}
+
+Here is an example of use:  A method for compressing data is to store
+only repeat counts in {\it runs}, where the latter means a set of
+consecutive, identical values.  For instance, the sequence
+2,2,2,0,0,5,0,0 would be compressed to 3,2,2,0,1,5,2,0, meaning that the
+data consist of first three 2s, then two 0s, then one 5, and finally two
+0s.  Note that the compressed version consists of alternating {\it run
+counts} and {\it run values}, respectively 2 and 0 at the end of the
+above example.
+
+To solve this in OpenMP, we'll first call the above functions to decide
+where to place the runs in our overall output.
+
+\begin{lstlisting}[numbers=left]
+void uncomprle(int *x,int nx,int *tmp,int *y,int *ny)
+{
+   int i,nx2 = nx/2;
+   int z[MAXTHREADS];
+   for (i = 0; i < nx2; i++) tmp[i+1] = x[2*i]; 
+   parprfsum(tmp+1,nx2+1,z);
+   tmp[0] = 0;
+   #pragma omp parallel
+   {  int j,k;
+      int me=omp_get_thread_num();  
+      #pragma omp for
+      for (j = 0; j < nx2; j++) {
+         // where to start the j-th run?
+         int start = tmp[j];
+         // what value is in the run?
+         int val = x[2*j+1];
+         // how long is the run?
+         int nrun = x[2*j];
+         for (k = 0; k < nrun; k++) 
+            y[start+k] = val;
+      }
+   }
+   *ny = tmp[nx2];
+}
+\end{lstlisting}
+
+\section{Example:  Run-Length Decompression in Thrust}
+\label{thrustrunlength}
+
+Here's how we could do the first part of the operation above, i.e.
+determining where to place the runs in our overall output, in Thrust:
+
+\begin{lstlisting}[numbers=left]
+#include <stdio.h>
+#include <thrust/device_vector.h>
+#include <thrust/scan.h>
+#include <thrust/sequence.h>
+#include <thrust/remove.h>  
+
+struct iseven {
+   bool operator()(const int i)
+   {  return (i % 2) == 0;
+   }
+};
+
+int main()
+{  int i;
+   int x[12] = {2,3,1,9,3,5,2,6,2,88,1,12};
+   int nx = 12;
+   thrust::device_vector<int> out(nx);
+   thrust::device_vector<int> seq(nx);
+   thrust::sequence(seq.begin(),seq.end(),0);
+   thrust::device_vector<int> dx(x,x+nx);
+   thrust::device_vector<int>::iterator newend =
+      thrust::copy_if(dx.begin(),dx.end(),seq.begin(),out.begin(),iseven());
+   thrust::inclusive_scan(out.begin(),out.end(),out.begin());
+   // "out" should be 2,2+1 = 3,2+1+3=6,...
+   thrust::copy(out.begin(), newend,
+      std::ostream_iterator<int>(std::cout, " "));
+   std::cout << "\n";
+}
+\end{lstlisting}
+

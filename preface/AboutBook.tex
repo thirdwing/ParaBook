@@ -1,0 +1,85 @@
+\newpage
+
+\begin{center}
+{\bf \large About This Book}
+\end{center}
+
+Why is this book different from all other parallel programming books?
+It is aimed more on the practical end of things, in that:
+
+\begin{itemize}
+
+\item There is very little theoretical content, such as O() analysis,
+maximum theoretical speedup, PRAMs, directed acyclic graphs (DAGs) and so on.
+
+\item Real code is featured throughout. 
+
+\item We use the main parallel platforms---OpenMP, CUDA and MPI---rather
+than languages that at this stage are largely experimental or arcane. 
+
+\item The running {\it performance} themes---communications latency,
+memory/network contention, load balancing and so on---are interleaved
+throughout the book, discussed in the context of specific platforms or
+applications.
+
+\item Considerable attention is paid to techniques for debugging.
+
+\end{itemize}
+
+The main programming language used is C/C++, but some of the code is in
+R, which has become the pre-eminent language for data analysis.  As a
+scripting language, R can be used for rapid prototyping.  In our case
+here, it enables me to write examples which are much less less cluttered
+than they would be in C/C++, thus easier for students to discern the
+fundamental parallelixation principles involved.  For the same reason,
+it makes it easier for students to write their own parallel code,
+focusing on those principles.  And R has a rich set of parallel
+libraries.
+
+It is assumed that the student is reasonably adept in programming, and
+has math background through linear algebra.  An appendix reviews the
+parts of the latter needed for this book.  Another appendix presents an
+overview of various systems issues that arise, such as process
+scheduling and virtual memory.
+
+It should be note that most of the code examples in the book are NOT
+optimized.  The primary emphasis is on simplicity and clarity of the
+techniques and languages used.  However, there is plenty of discussion
+on factors that affect speed, such cache coherency issues, network
+delays, GPU memory structures and so on.
+
+Here's how to get the code files you'll see in this book: The book is
+set in LaTeX, and the raw {\bf .tex} files are available in
+\url{http://heather.cs.ucdavis.edu/~matloff/158/PLN}.  Simply download
+the relevant file (the file names should be clear), then use a text
+editor to trim to the program code of interest.
+
+In order to illustrate for students the fact that research and teaching
+(should) enhance each other, I occasionally will make brief references
+here to some of my research work.
+
+Like all my open source textbooks, this one is {\bf constantly
+evolving}.  I continue to add new topics, new examples and so on, and of
+course fix bugs and improve the exposition.  For that reason, it is
+better to link to the latest version, which will always be at
+\url{http://heather.cs.ucdavis.edu/~matloff/158/PLN/ParProcBook.pdf},
+rather than to copy it. 
+
+For that reason, feedback is highly appreciated.  I wish to thank Stuart
+Ambler, Matt Butner, Stuart Hansen, Bill Hsu, Sameer Khan, Mikel
+McDaniel, Richard Minner, Lars Seeman, Marc Sosnick,
+and Johan Wikstr{\"o}m for their
+comments.  I'm also very grateful to Professor Hsu for his making
+available to me advanced GPU-equipped machines.
+
+You may also be interested in my open source textbook on probability and
+statistics, at \url{http://heather.cs.ucdavis.edu/probstatbook}.
+
+This work is licensed under a Creative Commons Attribution-No Derivative
+Works 3.0 United States License. Copyright is retained by N. Matloff in
+all non-U.S. jurisdictions, but permission to use these materials in
+teaching is still granted, provided the authorship and licensing
+information here is displayed in each unit. I would appreciate being
+notified if you use this book for teaching, just so that I know the
+materials are being put to use, but this is not required.
+

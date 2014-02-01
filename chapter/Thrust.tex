@@ -1,0 +1,1238 @@
+\chapter{Introduction to Thrust Programming} 
+\label{chap:thrust} 
+
+In the spirit of CUBLAS (Section \ref{cublas}) and other packages, the
+CUDA people have brought in another package to ease CUDA programming,
+Thrust.  It uses the C++ STL library as a model, and Thrust is indeed a
+C++ template library.  It includes various data manipulation routines,
+such as for sorting and prefix scan operations.
+
+\section{Compiling Thrust Code}
+
+Thrust allows the programmer a choice of {\it back ends}, i.e. platforms
+on which the executable code will run.  In addition to the CUDA back
+end, for running on the GPU, one can also choose OpenMP as the back end.
+The latter choice allows the high-level expressive power of Thrust to be
+used on multicore machines.  A third choice is Intel's TBB language.
+
+\subsection{Compiling to CUDA}
+
+If your CUDA version is at least 4.0, then Thrust is included, which
+will be assumed here.  In that case, you compile Thrust code with {\bf
+nvcc}, no special link commands needed.
+
+\subsection{Compiling to OpenMP}
+
+You can use Thrust to generate OpenMP code.  The Thrust ``include''
+files work without having a GPU.  Here for instance is how you would
+compile the first example program below:\footnote{Note that we used a
+{\bf .cpp} suffix for the source file name, instead of {\bf .cu}.  Or,
+we can use the {\bf -x cu} if compiling with {\bf nvcc}.}
+
+\begin{lstlisting}[numbers=left]
+g++ -g -O2 -o unqcount unqcount.cpp -fopenmp -lgomp \
+   -DTHRUST_DEVICE_BACKEND=THRUST_DEVICE_BACKEND_OMP \
+   -I/usr/home/matloff/Tmp/tmp1
+\end{lstlisting}
+
+I had no CUDA-capable GPU on this machine, but put the Thrust include directory
+tree in {\bf /usr/home/matloff/Tmp/tmp1}, and then compiled as with any
+other include file.
+
+The result is real OpenMP code.\footnote{If you search through the
+Thrust source code, you'll fine {\bf omp} pragmas.}  Everywhere you set
+up a Thrust vector, you'll be using OpenMP, i.e. the threads set
+up by Thrust will be OpenMP threads on the CPU rather than CUDA threads
+on the GPU.\footnote{Threads will not be set up if you use host
+arraysvectors.}  You set the number of threads as you do with any OpenMP
+program, e.g. with the environment variable OMP\_NUM\_THREADS.
+
+\section{Example:  Counting the Number of Unique Values in an
+Array}
+
+As our first example, suppose we wish to determine the number of
+distinct values in an integer array.  The following code may not be too
+efficient, but as an introduction to Thrust fundamental building
+blocks, we'll take the following approach:
+
+\begin{itemize}
+
+\item [(a)] sort the array
+
+\item [(b)] compare the array to a shifted version of itself, so that
+changes from one distinct element to another can be detected, producing
+an array of 1s (change) and 0s (no change)
+
+\item [(c)] count the number of 1s
+
+\end{itemize}
+
+Here's the code:
+
+\begin{lstlisting}[numbers=left]
+// various Thrust includes
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+#include <thrust/generate.h>
+#include <thrust/sort.h>
+#include <thrust/copy.h>
+#include <thrust/count.h>
+#include <cstdlib>
+
+int rand16()  // generate random integers mod 16
+{  return rand() % 16;  }
+
+// C++ functor, to be called from thrust::transform(); compares
+// corresponding elements of the arrays x and y, yielding 0 when they
+// match, 1 when they don't
+struct finddiff
+{
+   __device__ int operator()(const int& x, const int&y)
+   { return x == y?0:1; }
+};
+
+int main(void)
+{
+    // generate test data, 1000 random numbers, on the host, int type
+    thrust::host_vector<int> hv(1000);
+    thrust::generate(hv.begin(), hv.end(), rand16);
+
+    // copy data to the device, creating a vector there
+    thrust::device_vector<int> dv = hv;
+
+    // sort data on the device 
+    thrust::sort(dv.begin(), dv.end());
+
+    // create device vector to hold differences, with length 1 less than
+    // dv's length
+    thrust::device_vector<int> diffs(dv.size()-1);
+
+    // find the diffs; note that the syntax is finddiff(), not finddiff
+    thrust::transform(dv.begin(),dv.end()-1,
+       dv.begin()+1,diffs.begin(),finddiff());
+
+    // count the 1s, by removing 0s and checking new length 
+    // (or could use thrust::count())
+    int ndiffs = thrust::reduce(diffs.begin(), diffs.end(), (int) 0,
+       thrust::plus<int>());
+    printf("# distinct: %d\n",ndiffs+1);
+
+    // we've achieved our goal, but let's do a little more
+    // transfer data back to host
+    thrust::copy(dv.begin(), dv.end(), hv.begin());
+
+    printf("the sorted array:\n");
+    for (int i = 0; i < 1000; i++) printf("%d\n",hv[i]);
+
+    return 0;
+}
+\end{lstlisting}
+
+After generating some random data on a host array {\bf hv}, we copy it
+to the device, creating a vector {\bf dv} there.  This code is certainly
+much simpler to write than slogging through calls to {\bf cudaMalloc()}
+and {\bf cudaMemcpy()}!
+
+The heart of the code is the call to {\bf thrust::transform()}, which is
+used to implement step (b) in our outline above.  It performs a ``map''
+operation as in functional programming, taking one or two arrays (the
+latter is the case here) as input, and outputting an array of the same
+size.    
+
+This example, as is typical in Thrust code, defines a {\bf functor}.
+Well, what is a functor?  This is a C++ mechanism to produce a callable
+function, laregly similar in goal to using a pointer to a function.  In
+the context above, we are turning a C++ struct into a callable function,
+and we can do so with classes too.  Since structs and classes can have
+member variables, we can store needed data in them, and that is what
+distinguishes functors from function pointers.  
+
+The transform function does elementwise operation---it calls the functor
+on each corresponding pair of elements from the two input arguments (0th
+element with 0th element, 1st with 1st, etc.), placing the results in
+the output array.  So we must thus design our functor to do the map
+operation.  In this case, we want to compare successive elements of our
+array (after sorting it), so we must find a way to do this through some
+element-by-element operation.  The solution is to do elementwise
+comparison of the array and its shifted version.  The call is
+
+\begin{lstlisting}
+thrust::transform(dv.begin(),dv.end()-1,
+       dv.begin()+1,diffs.begin(),finddiff());
+\end{lstlisting}
+
+Note the parentheses in ``finddiff().''  This is basically a
+constructor, creating an instance of a {\bf finddiff} object and
+returning a pointer to it.  By contrast, in the code
+
+\begin{lstlisting}
+thrust::generate(hv.begin(), hv.end(), rand16);
+\end{lstlisting}
+
+{\bf rand16()} is an ordinary function, not a functor, so we just write
+its name here, thus passing a pointer to the function.
+
+In the code
+
+\begin{lstlisting}
+__device__ int operator()(const int& x, const int&y)
+{ return x == y?0:1; }
+\end{lstlisting}
+
+the C++ keyword {\bf operator} says we are defining a function, which in
+this case has two {\bf int} inputs and an {\bf int} output.  We stated
+earlier that functors are callable structs, and this is what gets
+called.
+
+Thrust vectors have built-in member functions {\bf begin()} and {\bf
+end()}, that specify the start and the place 1 element past the end of
+the array.  Note that we didn't actually create our shifted array in
+
+\begin{lstlisting}
+thrust::transform(dv.begin(),dv.end()-1,
+       dv.begin()+1,diffs.begin(),finddiff());
+\end{lstlisting}
+
+Instead, we specified ``the array beginning 1 element past the start of
+{\bf dv}.''
+
+The ``places'' returned by calling {\bf begin()} and {\bf end()} above
+are formally called {\bf iterators}, and work in a manner similar to
+pointers.  Note again that {\bf end()} returns a pointer to the location
+just {\it after} the last element of the array.  The pointers are of
+type \textbf{thrust::device\_vector$<$int$>$::iterator} here, with
+similar expressions for cases other than {\bf int} type.
+
+The transform function, in this case the comparison operation, will be
+done in parallel, on the GPU or other backend, as was the sorting.
+All that's left is to count the 1s.  We want to do that in parallel too,
+and Thrust provides another functional programming operation, reduction
+(as in OpenMP).  We specify Thrust's built-in addition function (we
+could have defined our own if it were a more complex situation) as the
+operation, and 0 as the initial value:  
+
+\begin{lstlisting}
+int ndiffs = thrust::reduce(diffs.begin(), diffs.end(), (int) 0, thrust::plus<int>());
+\end{lstlisting}
+
+We also could have used Thrust's {\bf thrust::count()} function for
+further convenience.
+
+Below is a shorter version of our unique-values-counter program, using
+{\bf thrust::unique()}.  Note that that function only removes {\it
+consecutive} duplicates, so the preliminary sort is still needed.
+
+\begin{lstlisting}[numbers=left]
+// various Thrust includes
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+#include <thrust/generate.h>
+#include <thrust/sort.h>
+#include <thrust/copy.h>
+#include <thrust/unique.h>
+#include <cstdlib>
+
+int rand16()  
+{  return rand() % 16;  }
+
+int main(void)
+{
+    thrust::host_vector<int> hv(1000);
+    thrust::generate(hv.begin(), hv.end(), rand16);
+    thrust::device_vector<int> dv = hv;
+    thrust::sort(dv.begin(), dv.end());
+    thrust::device_vector<int>::iterator newend = 
+       thrust::unique(dv.begin(),dv.end());
+    printf("# distinct: %d\n",newend - dv.begin());
+    return 0;
+}
+\end{lstlisting}
+
+Note the line
+
+\begin{lstlisting}
+thrust::device_vector<int>::iterator newend = 
+   thrust::unique(dv.begin(),dv.end());
+\end{lstlisting}
+
+The {\bf unique()} function returns an iterator pointing to (one element
+past) the end of the result of applying the unique-ifying operation.  We
+can then ``subtract'' iterator values to get our desired count:
+
+\begin{lstlisting}
+printf("# distinct: %d\n",newend - dv.begin());
+\end{lstlisting}
+
+\section{Example:  A Plain-C Wrapper for Thrust sort()}
+
+We may wish to wrap utility Thrust code in a function callable from a
+purely C/C++ program.  The code below does that for the Thrust sort
+function.  
+
+\begin{lstlisting}[numbers=left]
+// definitely needed
+extern "C" void tsort(int *x, int *nx);
+
+#include <thrust/device_vector.h>
+#include <thrust/sort.h>
+
+// nx set up as pointer so can call from R
+void tsort(int *x, int *nx)
+{  int n = *nx;
+   // set up device vector and copy x to it
+   thrust::device_vector<int> dx(x,x+n);
+   // sort, then copy back to x
+   thrust::sort(dx.begin(), dx.end());
+   thrust::copy(dx.begin(), dx.end(),x);
+}
+\end{lstlisting}
+
+To compile in the CUDA case, run {\bf nvcc -c} and then run {\bf gcc}
+(or whatever) as usual, making sure to link with the CUDA library.  For
+instance,
+
+\begin{lstlisting}
+nvcc -c SortForC.cu
+gcc Main.c S*o -L/usr/local/cuda/lib -lcudart
+\end{lstlisting}
+
+Here's an example:
+
+\begin{lstlisting}[numbers=left]
+// TestSort.cpp:  interface to Thrust sort from non-CUDA callers
+
+#include <stdio.h>
+
+extern "C" void tsort(int *x, int *nx);
+
+// test
+int main()
+{  int x[5] = {12,13,5,8,88};  
+   int n=5,*nx; nx = &n; 
+   int i;
+   tsort(x,nx);
+   for (i = 0; i < 5; i++) printf("%d\n",x[i]);
+}
+\end{lstlisting}
+
+Compile and run for the OpenMP case:
+
+\begin{lstlisting}
+g++ -g -mcmodel=medium -fopenmp -lgomp \
+   -DTHRUST_DEVICE_BACKEND=THRUST_DEVICE_BACKEND_OMP \
+   -I/home/matloff/Thrust SortForC.cpp -o sort.o -c
+g++ -g -mcmodel=medium TestSort.cpp sort.o -fopenmp -lgomp
+% a.out
+5
+8
+12
+13
+88
+\end{lstlisting}
+
+And for the CUDA case:
+
+\begin{lstlisting}
+nvcc SortForC.cu -c -o sfc.o
+gcc -g TestSort.c sfc.o -L/usr/local/cuda/lib -lcudart
+% a.out
+5
+8
+12
+13
+88
+\end{lstlisting}
+
+\section{Example:  Calculating Percentiles in an Array}
+
+One of the most useful types of Thrust operations is that provided by
+conditional functions.  For instance, {\bf copy\_if()} acts as a filter,
+copying from an array only those elements that satisfy a predicate.  In
+the example below, for instance, we can copy every third element of an
+array, or every eighth etc.
+
+\begin{lstlisting}[numbers=left]
+// illustration of copy_if()
+
+// find every k-th element in given array, going from smallest to
+// largest; k obtained from command line and fed into ismultk() functor
+
+// these are the the ik/n * 100 percentiles, i = 1, 2, ...
+
+#include <stdio.h>
+
+#include <thrust/device_vector.h>
+#include <thrust/sort.h>
+#include <thrust/sequence.h>
+#include <thrust/remove.h>  // for copy_if() but not copy_if.h
+
+// functor
+struct ismultk {
+   const int increm;  // k in above comments
+   // get k from call
+   ismultk(int _increm): increm(_increm) {}
+   __device__
+   bool operator()(const int i)
+   {  return i != 0 && (i % increm) == 0;
+   }
+};
+
+// test
+int main(int argc, char **argv)
+{  int x[15] = {6,12,5,13,3,5,4,5,8,88,1,11,9,22,168};  
+   int n=15;
+   thrust::device_vector<int> dx(x,x+n);
+   thrust::sort(dx.begin(),dx.end());
+   thrust::device_vector<int> seq(n);
+   thrust::sequence(seq.begin(),seq.end(),0);
+   thrust::device_vector<int> out(n);
+   int incr = atoi(argv[1]);  // k
+   // for each i in seq, call ismultk() on this i, and if get a true
+   // result, put dx[i] into out
+   thrust::device_vector<int>::iterator newend = 
+      thrust::copy_if(dx.begin(),dx.end(),seq.begin(),out.begin(),
+         ismultk(incr));
+   thrust::copy(out.begin(), newend,
+      std::ostream_iterator<int>(std::cout, " "));
+   std::cout << "\n";
+}
+
+\end{lstlisting}
+
+The {\bf sequence()} function simply generates an array consisting of 
+0,1,2,...,n-1.
+
+Our functor here is a little more advanced than the one we saw earlier.
+It now has an argument, which is {\bf incr} in the case of our call,
+
+\begin{lstlisting}
+thrust::copy_if(dx.begin(),dx.end(),seq,out,ismultk(incr));
+\end{lstlisting}
+
+That is then used to set a member variable in the struct:
+
+\begin{lstlisting}
+const int increm;  // k in above comments
+ismultk(int _increm): increm(_increm) {}
+\end{lstlisting}
+
+This is in a sense the {\it second}, though nonexplicit, argument to our
+calls to {\bf ismultk()}.  For example, in our call,
+
+\begin{lstlisting}
+thrust::copy_if(hx.begin(),hx.end(),seq,out,ismultk(incr));
+\end{lstlisting}
+
+the function designated by {\bf operator} within the {\bf ismultk}
+struct will be called individually on each element in {\bf hx}, each one
+playing role of {\bf i} in
+
+\begin{lstlisting}
+bool operator()(const int i)
+{  return i != 0 && (i % increm) == 0;
+}
+\end{lstlisting}
+
+Since this code references {\bf increm}, the value {\bf incr} in our
+call above is used as well.  The variable {\bf increm} acts as a
+``global'' variable to all the actions of the operator.
+
+\section{Mixing Thrust and CUDA Code}
+
+In order to mix Thrust and CUDA code, Thrust has the function {\bf
+thrust::raw\_pointer\_cast()} to convert from a Thrust device pointer
+type to a CUDA device pointer type, and has {\bf thrust::device\_ptr} to
+convert in the other direction.  
+
+In our example in Section \ref{doubling}, we convert from Thrust to
+an ordinary address on the device:
+
+\begin{lstlisting}
+int *wd;
+...
+wd = thrust::raw_pointer_cast(&w[0]);
+...
+{  if (i != 0 && (i % increm) == 0) wd[i] = 2 * wd[i];
+\end{lstlisting}
+
+In the other direction, say we start with a CUDA pointer, and want to
+use it in Thrust.  We might have something like
+
+\begin{lstlisting}
+int *dz;
+...
+cudaMalloc(&dz,100*sizeof(int));
+...
+thrust::device_ptr<int> tz(dz);
+...
+int k = thrust::reduce(tz,tz+100, (int) 0, thrust::plus<int>());
+\end{lstlisting}
+
+\section{Example:  Doubling Every k$^{th}$ Element of an Array}
+\label{doubling}
+
+Let's adapt the code from the last section in order to illustrate
+another technique.
+
+Suppose instead of copying every k$^{th}$ element of an array (after
+this first one), we wish to merely double each such element.  There are
+various ways we could do this, but here we'll use an approach that shows
+another way we can use functors.
+
+\begin{lstlisting}[numbers=left]
+// double every k-th element in given array; k obtained from command
+// line
+
+#include <stdio.h>
+
+#include <thrust/device_vector.h>
+#include <thrust/sequence.h>
+#include <thrust/remove.h>  // for copy_if()
+
+// functor
+struct ismultk
+{
+   const int increm;  // k in above comments
+   const  thrust::device_vector<int>::iterator w;  // "pointer" to our array
+   int *wd;
+   // get "pointer," k 
+   ismultk(thrust::device_vector<int>::iterator _w, int _increm):
+      w(_w), increm(_increm) {
+        wd = thrust::raw_pointer_cast(&w[0]);
+      }
+   __device__
+   bool operator()(const int i)  // bool is phony, but void doesn't work
+   {  if (i != 0 && (i % increm) == 0) wd[i] = 2 * wd[i];
+   }
+};
+
+// test
+int main(int argc, char **argv)
+{  // test case:
+   int x[15] = {6,12,5,13,3,5,4,5,8,88,1,11,9,22,168};
+   int n=15;
+   thrust::device_vector<int> dx(x,x+n);
+   thrust::device_vector<int> seq(n);
+   thrust::sequence(seq.begin(),seq.end(),0);
+   thrust::device_vector<int> out(n);
+   int incr = atoi(argv[1]);  // k
+   // for each i in seq, call ismultk() on this i, and if get a true
+   // result, put 0 in dx[i] 
+   thrust::copy_if(dx.begin(),dx.end(),seq.begin(),out.begin(),
+      ismultk(dx.begin(),incr));
+   // did it work?
+   thrust::copy(dx.begin(), dx.end(),
+      std::ostream_iterator<int>(std::cout, " "));
+   std::cout << "\n";
+}
+\end{lstlisting}
+
+Our functor here is quite different from before.
+
+First, one of the functor's arguments is an iterator, rather than a
+simple type like {\bf int}.  This is really just like passing an array
+pointer to an ordinary C function.
+
+Second, we've converted that iterator to a simple device array
+
+\begin{lstlisting}[numbers=left]
+const  thrust::device_vector<int>::iterator w;  // "pointer" to our array
+int *wd;
+...
+     wd = thrust::raw_pointer_cast(&w[0]);
+\end{lstlisting}
+
+% The reason to do this is that we want to modify the array, in the code
+% 
+% \begin{lstlisting}
+% if (i != 0 && (i % increm) == 0) wd[i] = 2 * wd[i];
+% \end{lstlisting}
+
+% We could NOT have used expressions like {\bf w[i]}, as {\bf []} is
+% strictly a host operator in Thrust.
+
+Our call to {\bf copy\_if()} doesn't actually do any copying.  We are
+exploiting the ``if'' in ``copy if,'' not the ``copy.''
+
+% \section{Example:  Doubling, But with the for\_each() Function}
+% 
+% Let's do the doubling code in Section \ref{doubling} another way, using
+% Thrust's {\bf for\_each} function.  We'll also see how to use the {\bf
+% sequence()} function in a more general way.  Here's the code:
+% 
+% 
+% Suppose our k value is 2.  Then the more general use of {\bf
+% thrust::sequence()} here, in which a starting value and a step value are
+% specified, gives us the indices in our array at which we wish to do the
+% doubling.  Then {\bf thrust::for\_each()} calls our functor on each
+% element among those indices.
+% 
+\section{Scatter and Gather Operations}
+
+These basically act as permuters; see the comments in the following
+small examples.
+
+{\bf scatter:}
+
+\begin{lstlisting}[numbers=left]
+// illustration of thrust::scatter(); permutes an array according to a
+// map array
+
+#include <stdio.h>
+#include <thrust/device_vector.h>
+#include <thrust/scatter.h>
+
+int main()
+{  int x[5] = {12,13,5,8,88};
+   int n=5;
+   thrust::device_vector<int> dx(x,x+n);
+   // allocate map vector
+   thrust::device_vector<int> dm(n);
+   // allocate vector for output of gather
+   thrust::device_vector<int> hdst(n);
+   // example map
+   int m[5] = {3,2,4,1,0};
+   thrust::copy(m,m+n,dm.begin());
+   thrust::scatter(dx.begin(),dx.end(),dm.begin(),ddst.begin());
+   // the original x[0] should now be at position 3, the original x[1]
+   // now at position 2, etc., i.e. 88,8,13,12;,5 check it:
+   thrust::copy(ddst.begin(), ddst.end(), 
+      std::ostream_iterator<int>(std::cout, " "));
+   std::cout << "\n";
+}
+\end{lstlisting}
+
+{\bf gather():}
+
+\begin{lstlisting}[numbers=left]
+// illustrations of thrust::gather(); permutes an array according to a
+// map array
+
+#include <stdio.h>
+#include <thrust/device_vector.h>
+#include <thrust/gather.h>
+
+int main()
+{  int x[5] = {12,13,5,8,88};
+   int n=5;
+   thrust::device_vector<int> dx(x,x+n);
+   // allocate map vector
+   thrust::device_vector<int> dm(n);
+   // allocate vector for output of gather
+   thrust::device_vector<int> ddst(n);
+   // example map
+   int m[5] = {3,2,4,1,0};
+   thrust::copy(m,m+n,dm.begin());
+   thrust::gather(dm.begin(),dm.end(),dx.begin(),ddst.begin());
+   // the original x[3] should now be at position 0, the original x[2]
+   // now at position 1, etc., i.e. 8,5,88,13,12; check it:
+   thrust::copy(ddst.begin(), ddst.end(), 
+      std::ostream_iterator<int>(std::cout, " "));
+   std::cout << "\n";
+}
+\end{lstlisting}
+
+\subsection{Example:  Matrix Transpose}
+\label{matxpose}
+
+Here's an example of {\bf scatter()}, applying it to transpose a matrix:
+
+\begin{lstlisting}[numbers=left]
+// matrix transpose, using scatter()
+
+// similar to (though less efficient than) code included in the examples
+// in the Thrust package
+
+// matrices assumed stored in one dimension, row-major order
+
+#include <stdio.h>
+#include <thrust/device_vector.h>
+#include <thrust/scatter.h>
+#include <thrust/sequence.h>
+
+struct transidx {
+   const int nr;  // number of rows in input
+   const int nc;  // number of columns in input
+   // set nr, nc
+   __host__ __device__
+   transidx(int _nr, int _nc): nr(_nr), nc(_nc) {};
+   // element i in input should map to which element in output?
+   __host__ __device__
+   int operator()(const int i)
+   {  int r = i / nc; int c = i % nc;  // row r, col c in input
+      // that will be row c and col r in output, which has nr cols
+      return c * nr + r;
+   }
+};
+
+int main()
+{  int mat[6] = {  // test data
+      5, 12, 13,
+      3, 4, 5};
+   int nrow=2,ncol=3,n=nrow*ncol;
+   thrust::device_vector<int> dmat(mat,mat+n);
+   // allocate map vector
+   thrust::device_vector<int> dmap(n);
+   // allocate vector for output of gather
+   thrust::device_vector<int> ddst(n);
+   // construct map; element r of input matrix goes to s of output
+   thrust::device_vector<int> seq(n);
+   thrust::sequence (seq.begin(),seq.end());
+   thrust::transform(seq.begin(),seq.end(),dmap.begin(),transidx(nrow,ncol));
+   thrust::scatter(dmat.begin(),dmat.end(),dmap.begin(),ddst.begin());
+   // ddst should now hold the transposed matrix, 5,3,12,4,13,5; check it:
+   thrust::copy(ddst.begin(), ddst.end(), std::ostream_iterator<int>(std::cout, " "));
+   std::cout << "\n";
+}
+\end{lstlisting}
+
+The idea is to determine, for each index in the original matrix, the
+index for that element in the transposed matrix.  Not much new here in
+terms of Thrust, just more complexity.  
+
+It should be mentioned that the performance of this algorithm with a GPU
+backend would likely be better if matrix tiling were used (Section
+\ref{partitioned}).
+
+\section{Advanced (``Fancy'') Iterators}
+
+Since each Thrust call invokes considerable overhead, Thrust offers some
+special iterators to reduce memory access time and memory space
+requirements.  Here are a few:
+
+\begin{itemize}
+
+\item {\bf Counting iterators:}  These play the same role as {\tt
+thrust::sequence()}, but without actually setting up an array, thus
+avoiding the memory issues.
+
+\item {\bf Transform iterators:}  If your code first calls {\bf
+thrust:transform()} and then makes another Thrust call on the result,
+you can combine them, which the Thrust people call {\bf fusion}.
+
+\item {\bf Zip iterators:} These essentially ``zip'' together two arrays
+(picture two halves of a zipper lining up parallel to each other as you
+zip up a coat).  This is often useful when one needs to retain
+information on the position of an element within its array.
+
+\item {\bf Discard iterators:}  Sometimes we call {\bf transform()} but
+don't need its output.  Discard iterators then act in a manner similar
+to {\bf /dev/null}.
+
+\end{itemize}
+
+\subsection{Example:  Matrix Transpose Again}
+
+Let's re-do the example of Section \ref{matxpose}, this time using
+fusion.  
+
+\begin{lstlisting}[numbers=left]
+// matrices assumed stored in one dimension, row-major order
+
+#include <stdio.h>
+#include <thrust/device_vector.h>
+#include <thrust/scatter.h>
+#include <thrust/sequence.h>
+#include <thrust/iterator/transform_iterator.h>
+
+struct transidx : public thrust::unary_function<int,int>
+{
+   const int nr;  // number of rows in input
+   const int nc;  // number of columns in input
+   // set nr, nc
+   __host__ __device__
+   transidx(int _nr, int _nc): nr(_nr), nc(_nc) {};
+   // element i in input should map to which element in output?
+   __host__ __device__
+   int operator()(int i)
+   {  int r = i / nc; int c = i % nc;  // row r, col c in input
+      // that will be row c and col r in output, which has nr cols
+      return c * nr + r;
+   }
+};
+
+int main()
+{  int mat[6] = {
+      5, 12, 13,
+      3, 4, 5};
+   int nrow=2,ncol=3,n=nrow*ncol;
+   thrust::device_vector<int> dmat(mat,mat+n);
+   // allocate map vector
+   thrust::device_vector<int> dmap(n);
+   // allocate vector for output of gather
+   thrust::device_vector<int> ddst(n);
+   // construct map; element r of input matrix goes to s of output
+   thrust::device_vector<int> seq(n);
+   thrust::sequence (seq.begin(),seq.end());
+   thrust::scatter(
+      dmat.begin(),dmat.end(),
+      thrust::make_transform_iterator(seq.begin(),transidx(nrow,ncol)),
+      ddst.begin());
+   thrust::copy(ddst.begin(), ddst.end(), 
+      std::ostream_iterator<int>(std::cout, " "));
+   std::cout << "\n";
+}
+\end{lstlisting}
+
+The key new code here is:
+
+\begin{lstlisting}[numbers=left]
+thrust::scatter(
+   dmat.begin(),dmat.end(),
+   thrust::make_transform_iterator(seq.begin(),transidx(nrow,ncol)),
+   ddst.begin());
+\end{lstlisting}
+
+Fusion requires a special type of iterator, whose type is horrendous to
+write.  So, Thrust provides the {\bf make\_transform\_iterator()}
+function, which we call to produce the special iterator needed, and then
+put the result directly into the second phase of our fusion, in this
+case into {\bf scatter()}.  
+
+Essentially our use of {\bf make\_transform\_iterator()} is telling
+Thrust, ``Don't apply {\bf transidx()} to {\bf seq} yet.  Instead,
+perform that operation as you go along, and feed each result of {\bf
+transidx()} directly into {\bf scatter()}.''  That word {\it direct} is
+the salient one here; it means we save n memory reads and n memory
+writes.\footnote{We are still writing to temporary storage, but that
+will probably be in registers (since we don't create the entire map at
+once), thus fast to access.} Moreover, we save the overhead of the
+kernel call, if our backend is CUDA.
+
+Note that we also had to be a little bit more elaborate with data typing
+issues, writing the first line of our struct declaration as
+
+\begin{lstlisting}
+struct transidx : public thrust::unary_function<int,int>
+\end{lstlisting}
+
+It won't work without this!
+
+It would be nice to be able to use a counting iterator in the above
+code, but apparently the compiler encounters problems with determining
+where the end of the counting sequence is.  There is similar code in the
+examples directory that comes with Thrust, and that one uses {\bf
+gather()} instead of {\bf scatter()}.  Since the former specifies a
+beginning and an end for the map array, counting interators work fine.
+
+\section{A Timing Comparison}
+
+Let's look at matrix transpose one more time.  First, we'll use the
+method, shown in earlier sections, of passing a device vector iterator
+to a functor.  For variety, let's use Thrust's {\bf for\_each()}
+function.  The following will be known as Code 1:
+
+\begin{lstlisting}[numbers=left]
+// matrix transpose, for_each version
+
+#include <stdio.h>
+#include <thrust/device_vector.h>
+
+// functor; holds iterators for the input and output matrices, and each
+// invocation of the function copies from one element from the former to
+// the latter
+struct copyelt2xp  
+{
+   int nrow;  
+   int ncol;  
+   const  thrust::device_vector<int>::iterator m;  // input matrix 
+   const  thrust::device_vector<int>::iterator mxp;  // output matrix
+   int *m1,*mxp1;
+   copyelt2xp(thrust::device_vector<int>::iterator _m, 
+            thrust::device_vector<int>::iterator _mxp, 
+            int _nr, int _nc): 
+      m(_m), mxp(_mxp), nrow(_nr), ncol(_nc) {
+         m1 = thrust::raw_pointer_cast(&m[0]);
+         mxp1 = thrust::raw_pointer_cast(&mxp[0]);
+      }
+   __device__
+   void operator()(const int i)  
+   // copies the i-th element of the input matrix to the output matrix
+   {  // elt i in input is row r, col c there
+      int r = i / ncol; int c = i % ncol;  
+      // that elt will be row c and col r in output, which has nrow
+      // cols, so copy as follows
+      mxp1[c*nrow+r] = m1[r*ncol+c];
+   }
+};
+
+// transpose nr x nc inmat to outmat
+void transp(int *inmat, int *outmat, int nr, int nc)
+{
+   thrust::device_vector<int> dmat(inmat,inmat+nr*nc);
+   // make space for the transpose
+   thrust::device_vector<int> dxp(nr*nc);
+   thrust::counting_iterator<int> seqb(0);
+   thrust::counting_iterator<int> seqe = seqb + nr*nc;
+   // for each i in seq, copy the matrix elt to its spot in the
+   // transpose
+   thrust::for_each(seqb,seqe,
+      copyelt2xp(dmat.begin(),dxp.begin(),nr,nc));
+   thrust::copy(dxp.begin(),dxp.end(),outmat);
+}
+
+int rand16()  // generate random integers mod 16
+{  return rand() % 16;  }
+
+// test code:  cmd line args are matrix size, then row, col of elt to be
+// checked
+
+int main(int argc, char **argv)
+{  int nr = atoi(argv[1]); int nc = nr;
+   int *mat = (int *) malloc(nr*nc*sizeof(int));
+   int *matxp = (int *) malloc(nr*nc*sizeof(int));
+   thrust::generate(mat,mat+nr*nc,rand16);
+   int checkrow = atoi(argv[2]);
+   int checkcol = atoi(argv[3]);
+   printf("%d\n",mat[checkrow*nc+checkcol]);
+   transp(mat,matxp,nr,nc);
+   printf("%d\n",matxp[checkcol*nc+checkrow]);
+}
+\end{lstlisting}
+
+The {\bf for\_each()} function does what the name implies:  It calls a
+function/functor for each element in a sequence, doing so in a parallel
+manner.  Note that this also obviates our earlier need to use a discard
+iterator.
+
+For comparison, we'll use the matrix transpose code that is included in
+Thrust's  {\bf examples/} file, to be referred to as Code 2:
+
+\begin{lstlisting}[numbers=left]
+// matrix transpose, from the Thrust package examples
+
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+#include <thrust/functional.h>
+#include <thrust/gather.h>
+#include <thrust/scan.h>
+#include <thrust/iterator/counting_iterator.h>
+#include <thrust/iterator/transform_iterator.h>
+#include <iostream>
+#include <iomanip>
+#include <stdio.h>
+
+// convert a linear index to a linear index in the transpose 
+struct transpose_index : public thrust::unary_function<size_t,size_t>
+{
+  size_t m, n;
+
+  __host__ __device__
+  transpose_index(size_t _m, size_t _n) : m(_m), n(_n) {}
+
+  __host__ __device__
+  size_t operator()(size_t linear_index)
+  {
+      size_t i = linear_index / n;
+      size_t j = linear_index % n;
+
+      return m * j + i;
+  }
+};
+
+// convert a linear index to a row index
+struct row_index : public thrust::unary_function<size_t,size_t>
+{
+  size_t n;
+
+  __host__ __device__
+  row_index(size_t _n) : n(_n) {}
+
+  __host__ __device__
+  size_t operator()(size_t i)
+  {
+      return i / n;
+  }
+};
+
+// transpose an M-by-N array
+template <typename T>
+void transpose(size_t m, size_t n, thrust::device_vector<T>& src, thrust::device_vector<T>& dst)
+{
+  thrust::counting_iterator<size_t> indices(0);
+
+  thrust::gather
+    (thrust::make_transform_iterator(indices, transpose_index(n, m)),
+     thrust::make_transform_iterator(indices, transpose_index(n, m)) + dst.size(),
+     src.begin(),
+     dst.begin());
+}
+
+void transp(int *inmat, int *outmat, int nr, int nc)
+{
+   thrust::device_vector<int> dmat(inmat,inmat+nr*nc);
+   // make space for the transpose
+   thrust::device_vector<int> dxp(nr*nc);
+   transpose(nr,nc,dmat,dxp);
+   thrust::copy(dxp.begin(),dxp.end(),outmat);
+}
+
+int rand16()  // generate random integers mod 16
+{  return rand() % 16;  }
+
+// test code:  cmd line args are matrix size, then row, col of elt to be
+// checked
+int main(int argc, char **argv)
+{  int nr = atoi(argv[1]); int nc = nr;
+   int *mat = (int *) malloc(nr*nc*sizeof(int));
+   int *matxp = (int *) malloc(nr*nc*sizeof(int));
+   thrust::generate(mat,mat+nr*nc,rand16);
+   int checkrow = atoi(argv[2]);
+   int checkcol = atoi(argv[3]);
+   printf("%d\n",mat[checkrow*nc+checkcol]);
+   transp(mat,matxp,nr,nc);
+   printf("%d\n",matxp[checkcol*nc+checkrow]);
+}
+\end{lstlisting}
+
+This approach is more efficient than ours in Section \ref{matxpose},
+making use of {\bf gather()} instead of {\bf scatter()}.  It also takes
+advantage of fusion etc.
+
+Code 1 is a lot easier to program than Code 2, but is it efficient?
+It turns out, though, that---good news!--the simpler code, i.e. Code 1,
+is actually a little faster than Code 2 in the case of a CUDA backend,
+and a lot faster in the OpenMP case.
+
+Here we ran on CUDA backends, on a 10000x10000 matrix:
+
+\begin{tabular}{|r|r|r|}
+\hline
+device & Code 1 & Code 2 \\ \hline 
+GeForce 9800 GTX & 3.67 & 3.75 \\ \hline 
+Tesla C2050 & 3.43 & 3.50 \\ \hline 
+\end{tabular}
+
+What about OpenMP?  Here are some timing runs on a multicore machine
+(many more cores than the 16 we tried), using an input matrix of size
+6000x6000:
+
+\begin{tabular}{|r|r||r|}
+\hline
+\# threads & Code 1 & Code 2 \\ \hline 
+2 & 9.57 & 23.01 \\ \hline 
+4 & 5.17 & 10.62 \\ \hline 
+8 & 3.01 & 7.42 \\ \hline 
+16 & 1.99 & 3.35 \\ \hline 
+\hline
+\end{tabular}
+
+\section{Example:  Transforming an Adjacency Matrix}
+
+Here is a Thrust approach to the example of Sections \ref{transgraph}
+and \ref{transgraph1}.  To review, here is the problem:
+
+Say we have a graph with adjacency matrix
+
+\begin{equation}
+\left (
+\begin{array}{rrrr}
+0 & 1 & 0 & 0 \\
+1 & 0 & 0 & 1 \\
+0 & 1 & 0 & 1 \\
+1 & 1 & 1 & 0 \\
+\end{array}
+\right )
+\end{equation}
+
+with row and column numbering starting at 0, not 1.  We'd like to
+transform this to a two-column matrix that displays the links, in this
+case
+
+\begin{equation}
+\left (
+\begin{array}{rr}
+0 & 1 \\
+1 & 0 \\
+1 & 3 \\
+2 & 1 \\
+2 & 3 \\
+3 & 0 \\
+3 & 1 \\
+3 & 2 \\
+\end{array}
+\right )
+\end{equation}
+
+For instance, there is a 1 on the far right, second row of the above
+matrix, meaning that in the graph there is an edge from vertex 1 to
+vertex 3.  This results in the row (1,3) in the transformed matrix seen
+above.
+
+Here's Thrust code to do this:
+
+\begin{lstlisting}[numbers=left]
+// transgraph problem, using Thrust
+
+#include <stdio.h>
+
+#include <thrust/device_vector.h>
+#include <thrust/transform.h>
+#include <thrust/remove.h>
+#include <thrust/iterator/discard_iterator.h>
+
+// forms one row of the output matrix
+struct makerow {
+   const thrust::device_vector<int>::iterator outmat;
+   int *om;
+   const int nc;  // number of columns
+   makerow(thrust::device_vector<int>::iterator _outmat,int _nc) :
+      outmat(_outmat), nc(_nc) {  om = thrust::raw_pointer_cast(&outmat[0]);  }
+   __device__
+   // the j-th 1 is in position i of the orig matrix
+   bool operator()(const int i, const int j)
+   {  om[2*j] = i / nc;
+      om[2*j+1] = i % nc;
+   }
+};
+
+int main(int argc, char **argv)
+{  int x[12] = {
+      0,1,1,0,
+      1,0,0,1,
+      1,1,0,0};
+   int nr=3,nc=4,nrc = nr*nc,i;
+   thrust::device_vector<int> dx(x,x+nrc);
+   thrust::device_vector<int> ones(x,x+nrc);
+   thrust::counting_iterator<int> seqb(0);
+   thrust::counting_iterator<int> seqe = seqb + nrc;
+   // get 1-D indices of the 1s
+   thrust::device_vector<int>::iterator newend =
+      thrust::copy_if(seqb,seqe,dx.begin(),ones.begin(),
+         thrust::identity<int>());
+   int n1s = newend - ones.begin();
+   thrust::device_vector<int> newmat(2*n1s);
+   thrust::device_vector<int> out(n1s);
+   thrust::counting_iterator<int> seq2b(0);
+   thrust::transform(ones.begin(),newend,seq2b,
+      thrust::make_discard_iterator(), makerow(newmat.begin(),nc));
+   thrust::copy(newmat.begin(), newmat.end(),
+      std::ostream_iterator<int>(std::cout, " "));
+   std::cout << "\n";
+}
+\end{lstlisting}
+
+One new feature here is the use of counting iterators.  First, we
+create two of them in the code
+
+\begin{lstlisting}
+thrust::counting_iterator<int> seqb(0);
+thrust::counting_iterator<int> seqe = seqb + nrc;
+\end{lstlisting}
+
+Here {\bf seqb} (virtually) points to the 0 in 0,1,2,...  Actually no
+array is set up, but references to {\bf seqb} will act as if there is an
+array there.  The counting iterator {\bf seqb} starts at {\bf nrc}, but
+its role here is simply to demarcate the end of the (virtual) array.
+
+Now, how does the code work?  The call to {\bf copy\_if()} has the goal
+of indentifying where in {\bf dx} the 1s are located.  This is
+accomplished by calling Thrust's {\bf identity()} function, which just
+does f(x) = x, which is enough, as it will return either 1 or 0, the
+latter interpreted as True.  In other words, the values between {\bf
+seqb} and {\bf seqe} will be copied whenever the corresponding values in
+{\bf dx} are 1s.  The copied values are then placed into our array {\bf
+ones}, which will now tell us where in {\bf dx} the 1s are.  Each such
+value, recall, will correspond to one row of our output matrix.  The
+construction of the latter action is done by calling {\bf transform()}:
+
+\begin{lstlisting}
+thrust::transform(ones.begin(),newend,seq2b,
+   thrust::make_discard_iterator(), makerow(newmat.begin(),nc));
+\end{lstlisting}
+
+The construction of the output matrix, {\bf newmat}, is actually done as
+a side effect of calling {\bf makerow()}.  For this reason, we've set
+our third parameter to {\bf thrust::make\_discard\_iterator()}.  Since we
+never use the output from {\bf transform()} itself, and it thus would be
+wasteful---of both memory space and memory bandwidth---to store that
+output in a real array.  Hence we use a discard array instead.
+
+Our algorithm consists of two stages---first finding the locations of
+the 1s, and then calculating the output matrix.  Could we combine the
+two stages?  Possibly, but there are difficulties to deal with.
+
+The biggest problem is that we don't know the size of the output matrix
+in advance; counting the 1s separately gives us that information.
+Without that, we'd either have to make the output matrix too large
+initially and then shrink it, or continually expand it as we go through
+the computation.  The latter would probably result in a major slowdown,
+as memory allocation takes time.
+
+\section{Prefix Scan}
+
+Thrust includes functions for prefix scan (see Chapter
+\ref{chap:prefix}):
+
+\begin{lstlisting}[numbers=left]
+// illustration of parallel prefix sum
+
+#include <stdio.h>
+
+#include <thrust/device_vector.h>
+#include <thrust/scan.h>
+
+int main(int argc, char **argv)
+{  int x[7] = {6,12,5,13,3,5,4};
+   int n=7,i;
+   thrust::device_vector<int> hx(x,x+n);
+   // in-place scan; default operation is +
+   thrust::inclusive_scan(hx.begin(),hx.end(),hx.begin());
+   thrust::copy(hx.begin(), hx.end(), 
+      std::ostream_iterator<int>(std::cout, " "));
+   std::cout << "\n";
+}
+\end{lstlisting}
+
+\section{More on Use of Thrust for a CUDA Backend}
+
+\subsection{Synchronicity}
+
+Thrust calls are in fact CUDA kernel calls, and thus entail some
+latency.  Other than the {\bf transform()}-family functions, the calls
+are all synchronous.
+
+\section{Error Messages}
+
+A message like
+
+\begin{lstlisting}
+terminate called after throwing an instance of 'std::bad_alloc'
+  what():  std::bad_alloc
+\end{lstlisting}
+
+may mean that Thrust wasn't able to allocate your large array on the
+GPU.
+
+Also, beware of the following.  Consider the code
+
+\begin{lstlisting}
+thrust::device_vector<int> seq(n);
+thrust::copy_if(hx.begin(),hx.end(),seq,out,ismultk(hx.begin(),incr));
+\end{lstlisting}
+
+We forgot the {\bf .begin()} for {\bf seq}!  If {\bf seq} had been a
+non-Thrust array, declared as
+
+\begin{lstlisting}
+int seq[n];
+\end{lstlisting}
+
+it would have been fine, but not for a Thrust array.
+
+Unfortunately, the compiler gives us a very long megillah as an error
+message, a highly uninformative one.  Keep this in mind if you get a
+30-line compiler error.
+
+The same thing happens if we forget to state the proper ``include''
+files.
+
+\section{Other Examples of Thrust Code in This Book}
+
+\begin{itemize}
+
+\item An application of Thrust's prefix-scan functionality is presented
+in Section \ref{thrustrunlength}
+
+\end{itemize}
+

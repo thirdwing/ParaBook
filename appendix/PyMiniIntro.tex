@@ -1,0 +1,1116 @@
+\chapter{Introduction to Python} 
+\label{chap:pyintro}
+
+{\bf NOTE:} This document is the first part of my open source book on
+Python,
+\url{http://heather.cs.ucdavis.edu/~matloff/Python/PLN/FastLanePython.pdf}.
+Go there for further information.
+
+So, let's get started with programming right away.
+
+\section{A 5-Minute Introductory Example}
+
+\subsection{Example Program Code}
+\label{veryfirst}
+
+Here is a simple, quick example.  Suppose I wish to find the value of 
+
+$$
+g(x) = \frac{x}{1-x^2}
+$$
+
+for x = 0.0, 0.1, ..., 0.9.  I could find these numbers by placing the
+following code,
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+for i in range(10):
+   x = 0.1*i
+   print x
+   print x/(1-x*x)
+\end{Verbatim}
+
+in a file, say {\bf fme.py},
+and then running the program by
+typing
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+python fme.py
+\end{Verbatim}
+
+at the command-line prompt.  The output will look
+like this:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+0.0
+0.0
+0.1
+0.10101010101
+0.2
+0.208333333333
+0.3
+0.32967032967
+0.4
+0.47619047619
+0.5
+0.666666666667
+0.6
+0.9375
+0.7
+1.37254901961
+0.8
+2.22222222222
+0.9
+4.73684210526
+\end{Verbatim}
+
+\subsection{Python Lists}
+
+How does the program work?  First, Python's {\bf range()} function is an
+example of the use of {\bf lists}, i.e. Python arrays,\footnote{I
+loosely speak of them as ``arrays'' here, but as you will see, they are
+more flexible than arrays in C/C++.  
+
+On the other hand, true arrays can be accessed more quickly.  In C/C++,
+the $i^{th}$ element of an array {\bf X} is i words past the beginning
+of the array, so we can go right to it.  This is not possible with
+Python lists, so the latter are slower to access.  The NumPy add-on
+package for Python offers true arrays.} even though not quite
+explicitly.  Lists are absolutely fundamental to Python, so watch out in
+what follows for instances of the word ``list''; resist the temptation
+to treat it as the English word ``list,'' instead always thinking about
+the Python construct {\bf list}.
+
+Python's {\bf range()} function returns a list of consecutive integers,
+in this case the list [0,1,2,3,4,5,6,7,8,9].  Note that this is official
+Python notation for lists---a sequence of objects (these could be all
+kinds of things, not necessarily numbers), separated by commas and
+enclosed by brackets.
+
+\subsection{Loops}
+
+So, the {\bf for} statement above is equivalent to:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+for i in [0,1,2,3,4,5,6,7,8,9]:
+\end{Verbatim}
+
+As you can guess, this will result in 10 iterations of the loop, with
+{\bf i} first being 0, then 1, etc.
+
+The code
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+for i in [2,3,6]:
+\end{Verbatim}
+
+would give us three iterations, with {\bf i} taking on the values 2, 3
+and 6.
+
+Python has a {\bf while} construct too (though not an {\bf until}).
+
+There is also a {\bf break} statement like that of C/C++, used to leave
+loops ``prematurely.''  For example:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+x = 5
+while 1:
+   x += 1
+   if x == 8:
+      print x
+      break
+\end{Verbatim}
+
+Also very useful is the {\bf continue} statement, which instructs the
+Python interpreter to skip the remainder of the current iteration of a
+loop.  For instance, running the code
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+sum = 0
+for i in [5,12,13]:
+   if i < 10: continue
+   sum += i
+print sum
+\end{Verbatim}
+
+prints out 12+13, i.e. 25.
+
+The {\bf pass} statement is a ``no-op,'' doing nothing.
+
+\subsection{Python Block Definition} 
+
+Now focus your attention on that inoccuous-looking colon at the end of
+the {\bf for} line above, which defines the start of a block.  Unlike
+languages like C/C++ or even Perl, which use braces to define blocks,
+Python uses a combination of a colon and indenting to define a block.  I
+am using the colon to say to the Python interpreter,
+
+\begin{quote}
+
+Hi, Python interpreter, how are you?  I just wanted to let you know, by
+inserting this colon, that a block begins on the next line.  I've
+indented that line, and the two lines following it, further right than
+the current line, in order to tell you those three lines form a block.  
+
+\end{quote}
+
+I chose 3-space indenting, but the amount wouldn't matter as long as I
+am consistent.  If for example I were to write\footnote{Here {\bf g()}
+is a function I defined earlier, not shown.}
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+for i in range(10):
+   print 0.1*i
+      print g(0.1*i)
+\end{Verbatim}
+
+the Python interpreter would give me an error message, telling me that I
+have a syntax error.\footnote{Keep this in mind.  New Python users are
+often baffled by a syntax error arising in this situation.}  I am only
+allowed to indent further-right within a given block if I have a
+sub-block within that block, e.g.
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+for i in range(10):
+   if i%2 == 1:  
+      print 0.1*i
+      print g(0.1*i)
+\end{Verbatim}
+
+Here I am printing out only the cases in which the variable {\bf i} is
+an odd number; \% is the ``mod'' operator as in C/C++.
+
+Again, note the colon at the end of the {\bf if} line, and the fact that
+the two {\bf print} lines are indented further right than the {\bf if}
+line. 
+
+Note also that, again unlike C/C++/Perl, there are no semicolons at the
+end of Python source code statements.  A new line means a new
+statement.  If you need a very long line, you can use the
+backslash character for continuation, e.g.
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+x = y + \
+       z
+\end{Verbatim}
+
+Most of the usual C operators are in Python, including the relational
+ones such as the {\bf ==} seen here.  The {\bf 0x} notation for hex is
+there, as is the FORTRAN {\bf **} for exponentiation.  
+
+Also, the {\bf if} construct can be paired with {\bf else} as usual, and
+you can abbreviate {\bf else if} as {\bf elif}.  
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>> def f(x):
+...    if x > 0: return 1
+...    else: return 0
+...
+>>> f(2)
+1
+>>> f(-1)
+0
+\end{Verbatim}
+
+The boolean operators are {\bf and}, {\bf or} and {\bf not}.  
+
+You'll see examples as we move along.  
+
+By the way, watch out for Python statements like {\bf print a or b or
+c}, in which the first true (i.e. nonzero) expression is printed and the
+others ignored; this is a common Python idiom.
+
+\subsection{Python Also Offers an Interactive Mode}
+\label{interactive}
+
+A really nice feature of Python is its ability to run in interactive
+mode.  You usually won't do this, but it's a great way to do a quick
+tryout of some feature, to really see how it works.  Whenever you're not
+sure whether something works, your motto should be, ``When in doubt, try
+it out!'', and interactive mode makes this quick and easy.
+
+We'll also be doing a lot of that in this tutorial, with interactive
+mode being an easy way to do a quick illustration of a feature. 
+
+Instead of executing this program from the command line in {\bf batch}
+mode as we did above, we could enter and run the code in {\bf
+interactive} mode:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+% python
+>>> for i in range(10):
+...    x = 0.1*i
+...    print x
+...    print x/(1-x*x)
+... 
+0.0
+0.0
+0.1
+0.10101010101
+0.2
+0.208333333333
+0.3
+0.32967032967
+0.4
+0.47619047619
+0.5
+0.666666666667
+0.6
+0.9375
+0.7
+1.37254901961
+0.8
+2.22222222222
+0.9
+4.73684210526
+>>> 
+\end{Verbatim}
+
+Here I started Python, and it gave me its $>>>$ interactive prompt.
+Then I just started typing in the code, line by line.  Whenever I was
+inside a block, it gave me a special prompt, ``...'', for that purpose.
+When I typed a blank line at the end of my code, the Python interpreter
+realized I was done, and ran the code.\footnote{Interactive mode allows
+us to execute only single Python statements or evaluate single Python
+expressions.  In our case here, we typed in and executed a single {\bf
+for} statement.  Interactive mode is not designed for us to type in an
+entire program.  Technically we could work around this by beginning with
+something like "if 1:", making our program one large {\bf if} statement,
+but of course it would not be convenient to type in a long program
+anyway.}
+
+While in interactive mode, one can go up and down the command history by
+using the arrow keys, thus saving typing.
+
+To exit interactive Python, hit ctrl-d.
+
+{\bf Automatic printing:} By the way, in interactive mode, just
+referencing or producing an object, or even an expression, without
+assigning it, will cause its value to print out, even without a {\bf
+print} statement.  For example:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> for i in range(4):
+...    3*i
+...
+0
+3
+6
+9
+\end{Verbatim}
+
+Again, this is true for general objects, not just expressions, e.g.:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> open('x')
+<open file 'x', mode 'r' at 0xb7eaf3c8>
+\end{Verbatim}
+
+Here we opened the file {\bf x}, which produces a file object.  Since we
+did not assign to a variable, say {\bf f}, for reference later in the
+code, i.e. we did not do the more typical
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+f = open('x')
+\end{Verbatim}
+
+the object was printed out.  We'd get that same information this way:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> f = open('x')
+>>> f
+<open file 'x', mode 'r' at 0xb7f2a3c8>
+\end{Verbatim}
+
+\subsection{Python As a Calculator} 
+
+Among other things, this means you can use Python as a quick calculator
+(which I do a lot).  If for example I needed to know what 5\% above
+\$88.88 is, I could type
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+% python
+>>> 1.05*88.88
+93.323999999999998
+\end{Verbatim}
+
+Among other things, one can do quick conversions between decimal and
+hex:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> 0x12
+18
+>>> hex(18)
+'0x12'
+\end{Verbatim}
+
+If I need math functions, I must {\bf import} the Python math library
+first.  This is analogous to what we do in C/C++, where we must have a
+{\bf \#include} line for the library in our source code and must link in
+the machine code for the library.  
+
+We must refer to imported functions in the context of the library, in
+this case the math library.  For example, the functions {\bf sqrt()} and
+{\bf sin()} must be prefixed by {\bf math}:\footnote{A method for
+avoiding the prefix is shown in Sec.  \ref{import}.}
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> import math
+>>> math.sqrt(88)
+9.3808315196468595
+>>> math.sin(2.5)
+0.59847214410395655
+\end{Verbatim}
+
+\section{A 10-Minute Introductory Example}
+\label{tenmin}
+
+\subsection{Example Program Code}
+\label{tme}
+
+This program reads a text file, specified on the command line, and
+prints out the number of lines and words in the file:
+
+\begin{Verbatim}[fontsize=\relsize{-2},numbers=left]
+# reads in the text file whose name is specified on the command line,
+# and reports the number of lines and words
+
+import sys
+
+def checkline():
+   global l
+   global wordcount
+   w = l.split()
+   wordcount += len(w)
+
+wordcount = 0
+f = open(sys.argv[1])
+flines = f.readlines()
+linecount = len(flines)  
+for l in flines:
+   checkline()
+print linecount, wordcount
+\end{Verbatim}
+
+Say for example the program is in the file {\bf tme.py}, and we have a
+text file {\bf x} with contents
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+
+This is an
+example of a 
+text file.
+
+\end{Verbatim}
+
+(There are five lines in all, the first and last of which are blank.)
+
+If we run this program on this file, the result is:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+python tme.py x
+5 8
+\end{Verbatim}
+
+On the surface, the layout of the code here looks like that of a C/C++
+program:  First an {\bf import} statement, analogous to {\bf \#include}
+(with the corresponding linking at compile time) as stated above; second
+the definition of a function; and then the ``main'' program.  This is
+basically a good way to look at it, but keep in mind that the Python
+interpreter will execute everything in order, starting at the top.  In
+executing the {\bf import} statement, for instance, that might actually
+result in some code being executed, if the module being imported has
+some free-standing code rather than just function definitions.  More on
+this later.  Execution of the {\bf def} statement won't execute any code
+for now, but the act of defining the function is considered execution.
+
+Here are some features in this program which were not in the first
+example:
+
+\begin{itemize}
+
+\item use of command-line arguments
+
+\item file-manipulation mechanisms
+
+\item more on lists
+
+\item function definition
+
+\item library importation 
+
+\item introduction to scope 
+
+\end{itemize}
+
+I will discuss these features in the next few sections.
+
+\subsection{Command-Line Arguments}
+
+First, let's explain {\bf sys.argv}.  Python includes a {\bf module}
+(i.e. library) named {\bf sys}, one of whose member variables is {\bf
+argv}.  The latter is a Python list, analogous to {\bf argv} in
+C/C++.\footnote{There is no need for an analog of {\bf argc}, though.
+Python, being an object-oriented language, treats lists as objects, The
+length of a list is thus incorporated into that object.  So, if we need
+to know the number of elements in {\bf argv}, we can get it via {\bf
+len(argv)}.} Element 0 of the list is the script name, in this case {\bf
+tme.py}, and so on, just as in C/C++.  In our example here, in which we
+run our program on the file {\bf x}, {\bf sys.argv[1]} will be the
+string 'x' (strings in Python are generally specified with single quote
+marks).  Since {\bf sys} is not loaded automatically, we needed the {\bf
+import} line.
+
+Both in C/C++ and Python, those command-line arguments are of course
+strings.  If those strings are supposed to represent numbers, we could
+convert them.  If we had, say, an integer argument, in C/C++ we would do
+the conversion using {\bf atoi()}; in Python, we'd use {\bf int()}.  For
+floating-point, in Python we'd use {\bf float()}.\footnote{In C/C++, we
+could use {\bf atof()} if it were available, or {\bf sscanf()}.}
+
+\subsection{Introduction to File Manipulation}
+\label{files}
+
+The function {\bf open()} is similar to the one in C/C++.  Our line
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+f = open(sys.argv[1])
+\end{Verbatim}
+
+created an object of {\bf file} class, and assigned it to {\bf f} .
+
+The {\bf readlines()} function of the {\bf file} class returns a list
+(keep in mind, ``list'' is an official Python term) consisting of the
+lines in the file.  Each line is a string, and that string is one
+element of the list.  Since the file here consisted of five lines, the
+value returned by calling {\bf readlines()} is the five-element list
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+['','This is an','example of a','text file','']
+\end{Verbatim}
+
+(Though not visible here, there is an end-of-line character in each string.)
+
+\subsection{Lack of Declaration}
+\label{decl}
+
+Variables are not declared in Python.  A variable is created when the
+first assignment to it is executed.  For example, in the program {\bf
+tme.py} above, the variable {\bf flines} does not exist until the
+statement
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+flines = f.readlines()
+\end{Verbatim}
+
+is executed.  
+
+By the way, a variable which has not been assigned a value yet, such as
+{\bf wordcount} at first above, has the value {\bf None}. And this can
+be assigned to a variable, tested for in an {\bf if} statement, etc.
+
+\subsection{Locals Vs. Globals}
+
+Python does not really have global variables in the sense of C/C++, in
+which the scope of a variable is an entire program.  We will discuss
+this further in Section \ref{unctuous}, but for now assume our source
+code consists of just a single {\bf .py} file; in that case, Python does
+have global variables pretty much like in C/C++ (though with important
+differences).
+
+Python tries to infer the scope of a variable from its position in the
+code.  If a function includes any code which assigns to a variable, then
+that variable is assumed to be local, unless we use the {\bf global}
+keyword.  So, in the code for {\bf checkline()}, Python would assume
+that {\bf l} and {\bf wordcount} are local to {\bf checkline()} if we
+had not specified {\bf global}.
+
+Use of global variables simplifies the presentation here, and I
+personally believe that the unctuous criticism of global variables is
+unwarranted.  (See
+\url{http://heather.cs.ucdavis.edu/~matloff/globals.html}.)  In fact, in
+one of the major types of programming, {\bf threads}, use of globals is
+basically {\it mandatory}.  
+
+You may wish, however, to at least group together all your globals into
+a class, as I do.  See Appendix \ref{glbls}. 
+
+\subsection{A Couple of Built-In Functions}
+
+The function {\bf len()} returns the number of elements in a list.  In
+the {\bf tme.py} example above, we used this to find the number of lines
+in the file, since {\bf readlines()} returned a list in which each
+element consisted of one line of the file. 
+
+The method {\bf split()} is a member of the {\bf string}
+class.\footnote{Member functions of classes are referred to as {\bf
+methods}.} It splits a string into a list of words, for
+example.\footnote{The default is to use blank characters as the
+splitting criterion, but other characters or strings can be used.}  So,
+for instance, in {\bf checkline()} when {\bf l} is 'This is an' then the
+list {\bf w} will be equal to ['This','is','an'].  (In the case of the
+first line, which is blank, {\bf w} will be equal to the empty list,
+[].) 
+
+\section{Types of Variables/Values}
+
+As is typical in scripting languages, type in the sense of C/C++ {\bf
+int} or {\bf float} is not declared in Python.  However, the Python
+interpreter does internally keep track of the type of all objects.  Thus
+Python variables don't have types, but their values do.  In other words,
+a variable {\bf X} might be bound to (i.e. point to) an integer in one
+place in your program and then be rebound to a class instance at another
+point.
+
+Python's types include notions of scalars, {\bf sequences} (lists or
+{\bf tuples}) and dictionaries (associative arrays, discussed in Sec.
+\ref{hashes}), classes, function, etc. 
+
+\section{String Versus Numerical Values}
+
+Unlike Perl, Python does distinguish between numbers and their string
+representations.  The functions {\bf eval()} and {\bf str()} can be used
+to convert back and forth.  For example:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> 2 + '1.5'
+Traceback (most recent call last):
+  File "<stdin>", line 1, in ?
+TypeError: unsupported operand type(s) for +: 'int' and 'str'
+>>> 2 + eval('1.5')
+3.5
+>>> str(2 + eval('1.5'))
+'3.5'
+\end{Verbatim}
+
+There are also {\bf int()} to convert from strings to integers, and {\bf
+float()}, to convert from strings to floating-point values:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> n = int('32')
+>>> n
+32
+>>> x = float('5.28')
+>>> x
+5.2800000000000002
+\end{Verbatim} 
+
+See also Section \ref{formatted}. 
+
+\section{Sequences}
+
+Lists are actually special cases of {\bf sequences}, which are all
+array-like but with some differences.  Note though, the commonalities;
+all of the following (some to be explained below) apply to any sequence
+type:
+
+\begin{itemize}
+
+\item the use of brackets to denote individual elements (e.g. {\bf
+x[i]})
+
+\item the built-in {\bf len()} function to give the number of elements
+in the sequence\footnote{This function is applicable to dictionaries
+too.}
+
+\item {\bf slicing} operations, i.e. the extraction of subsequences 
+
+\item use of {\bf +} and {\bf *} operators for concatenation and
+replication
+
+\end{itemize}
+
+\subsection{Lists (Quasi-Arrays)}
+
+As stated earlier, lists are denoted by brackets and commas.  For
+instance, the statement
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+x = [4,5,12]
+\end{Verbatim}
+
+would set {\bf x} to the specified 3-element array.  
+
+Lists may grow dynamically, using the {\bf list} class' {\bf append()}
+or {\bf extend()} functions.  For example, if after the abovfe statement
+we were to execute
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+x.append(-2)
+\end{Verbatim}
+
+{\bf x} would now be equal to [4,5,12,-2].
+
+A number of other operations are available for lists, a few of which are
+illustrated in the following code:  
+
+\begin{Verbatim}[fontsize=\relsize{-2},numbers=left]
+>>> x = [5,12,13,200]
+>>> x
+[5, 12, 13, 200]
+>>> x.append(-2)
+>>> x
+[5, 12, 13, 200, -2]
+>>> del x[2]
+>>> x
+[5, 12, 200, -2]
+>>> z = x[1:3]  # array "slicing": elements 1 through 3-1 = 2
+>>> z
+[12, 200]
+>>> yy = [3,4,5,12,13]
+>>> yy[3:]  # all elements starting with index 3
+[12, 13]
+>>> yy[:3]  # all elements up to but excluding index 3
+[3, 4, 5]
+>>> yy[-1]  # means "1 item from the right end"
+13
+>>> x.insert(2,28)  # insert 28 at position 2
+>>> x
+[5, 12, 28, 200, -2]
+>>> 28 in x  # tests for membership; 1 for true, 0 for false 
+1
+>>> 13 in x
+0
+>>> x.index(28)  # finds the index within the list of the given value
+2
+>>> x.remove(200)  # different from "delete," since it's indexed by value
+>>> x
+[5, 12, 28, -2]
+>>> w = x + [1,"ghi"]  # concatenation of two or more lists
+>>> w
+[5, 12, 28, -2, 1, 'ghi']
+>>> qz = 3*[1,2,3]  # list replication
+>>> qz
+[1, 2, 3, 1, 2, 3, 1, 2, 3]
+>>> x = [1,2,3]
+>>> x.extend([4,5])
+>>> x
+[1, 2, 3, 4, 5]
+>>> y = x.pop(0)  # deletes and returns 0th element
+>>> y
+1
+>>> x
+[2, 3, 4, 5]
+>>> t = [5,12,13]
+>>> t.reverse()
+>>> t
+[13, 12, 5]
+\end{Verbatim}
+
+We also saw the {\bf in} operator in an earlier example, used in a {\bf
+for} loop.
+
+A list could include mixed elements of different types, including other
+lists themselves.
+
+The Python idiom includes a number of common ``Python tricks'' involving
+sequences, e.g.  the following quick, elegant way to swap two variables
+{\bf x} and {\bf y}:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> x = 5
+>>> y = 12
+>>> [x,y] = [y,x]
+>>> x
+12
+>>> y
+5
+\end{Verbatim}
+
+Multidimensional lists can be implemented as lists of lists.  For
+example:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> x = []
+>>> x.append([1,2])
+>>> x
+[[1, 2]]
+>>> x.append([3,4])
+>>> x
+[[1, 2], [3, 4]]
+>>> x[1][1]
+4
+\end{Verbatim}
+
+But be careful!  Look what can go wrong:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> x = 4*[0]
+>>> y = 4*[x]
+>>> y
+[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+>>> y[0][2]
+0
+>>> y[0][2] = 1
+>>> y
+[[0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0], [0, 0, 1, 0]]
+\end{Verbatim}
+
+The problem is that that assignment to {\bf y} was really a list of
+four references to the same thing ({\bf x}).  When the object pointed to
+by {\bf x} changed, then all four rows of {\bf y} changed.
+
+The Python Wikibook
+(\url{http://en.wikibooks.org/wiki/Python_Programming/Lists}) suggests a
+solution, in the form of {\bf list comprehensions}, which we cover in
+Section \ref{listcomps}:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> z = [[0]*4 for i in range(5)]
+>>> z
+[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+>>> z[0][2] = 1
+>>> z
+[[0, 0, 1, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+\end{Verbatim}
+
+\subsection{Tuples}
+
+{\bf Tuples} are like lists, but are {\bf immutable}, i.e. unchangeable.
+They are enclosed by parentheses or nothing at all, rather than
+brackets.  The parentheses are mandatory if there is an ambiguity
+without them, e.g. in function arguments.  A comma must be used in the
+case of empty or single tuple, e.g. {\bf (,)} and {\bf (5,)}.
+
+The same operations can be used, except those which would change the tuple.
+So for example 
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+x = (1,2,'abc') 
+print x[1]  # prints 2
+print len(x)  # prints 3
+x.pop()  # illegal, due to immutability
+\end{Verbatim}
+
+A nice function is {\bf zip()}, which strings together corresponding
+components of several lists, producing tuples, e.g.
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> zip([1,2],['a','b'],[168,168])  
+[(1, 'a', 168), (2, 'b', 168)]
+\end{Verbatim}
+
+\subsection{Strings}
+\label{stringsec}
+
+Strings are essentially tuples of character elements.  But they are
+quoted instead of surrounded by parentheses, and have more flexibility
+than tuples of character elements would have.  
+
+\subsubsection{Strings As Turbocharged Tuples}
+
+Let's see some examples of string operations:
+
+\begin{Verbatim}[fontsize=\relsize{-2},numbers=left]
+>>> x = 'abcde'
+>>> x[2]
+'c'
+>>> x[2] = 'q'  # illegal, since strings are immmutable
+Traceback (most recent call last):
+  File "<stdin>", line 1, in ?
+TypeError: object doesn't support item assignment
+>>> x = x[0:2] + 'q' + x[3:5]
+>>> x
+'abqde'
+\end{Verbatim}
+
+(You may wonder why that last assignment 
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> x = x[0:2] + 'q' + x[3:5]
+\end{Verbatim}
+
+does not violate immmutability.  The reason is that {\bf x} is really a
+pointer, and we are simply pointing it to a new string created from old
+ones.  See Section \ref{effects}.)
+
+As noted, strings are more than simply tuples of characters: 
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> x.index('d')  # as expected
+3
+>>> 'd' in x  # as expected 
+1
+>>> x.index('de')  # pleasant surprise
+3
+\end{Verbatim}
+
+As can be seen, the {\bf index()} function from the {\bf str} class
+has been overloaded, making it more flexible. 
+
+There are many other handy functions in the {\bf str} class.  For
+example, we saw the {\bf split()} function earlier.  The opposite of
+this function is {\bf join()}.  One applies it to a string, with a
+sequence of strings as an argument.  The result is the concatenation of
+the strings in the sequence, with the original string between each of
+them:\footnote{The example here shows the ``new'' usage of {\bf join()},
+now that string methods are built-in to Python.  See discussion of
+``new'' versus ``old'' below.}
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> '---'.join(['abc','de','xyz'])
+'abc---de---xyz'
+>>> q = '\n'.join(('abc','de','xyz'))
+>>> q
+'abc\nde\nxyz'
+>>> print q
+abc
+de
+xyz
+\end{Verbatim}
+
+Here are some more:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> x = 'abc'
+>>> x.upper()
+'ABC'
+>>> 'abc'.upper()
+'ABC'
+>>> 'abc'.center(5) # center the string within a 5-character set
+' abc '
+>>> 'abc de f'.replace(' ','+')
+'abc+de+f'
+>>> x = 'abc123'
+>>> x.find('c1')  # find index of first occurrence of 'c1' in x
+2
+>>> x.find('3')
+5
+>>> x.find('1a')
+-1
+\end{Verbatim}
+
+A very rich set of functions for string manipulation is also available
+in the {\bf re} (``regular expression'') module.
+
+The {\bf str} class is built-in for newer versions of Python.  With
+an older version, you will need a statement
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+import string
+\end{Verbatim}
+
+That latter class does still exist, and the newer {\bf str} class does
+not quite duplicate it.
+
+\subsubsection{Formatted String Manipulation}
+\label{formatted}
+
+String manipulation is useful in lots of settings, one of which is in
+conjunction with Python's {\bf print} command.  For example,
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+print "the factors of 15 are %d and %d" % (3,5) 
+\end{Verbatim}
+
+prints out
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+the factors of 15 are 3 and 5
+\end{Verbatim}
+
+The {\bf \%d} of course is the integer format familiar from C/C++.
+
+But actually, the above action is a string issue, not a print issue.
+Let's see why.  In
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+print "the factors of 15 are %d and %d" % (3,5) 
+\end{Verbatim}
+
+the portion
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+"the factors of 15 are %d and %d" % (3,5) 
+\end{Verbatim}
+
+is a string operation, producing a new string; the {\bf print} simply
+prints that new string.  
+
+For example:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> x = "%d years old" % 12
+\end{Verbatim}
+
+The variable {\bf x} now is the string '12 years old'.
+
+This is another very common idiom, quite powerful.\footnote{Some C/C++
+programmers might recognize the similarity to {\bf sprintf()} from the C
+library.}
+
+Note the importance above of writing '(3,5)' rather than '3,5'.  In the
+latter case, the {\bf \%} operator would think that its operand was
+merely 3, whereas it needs a 2-element tuple.  Recall that parentheses
+enclosing a tuple can be omitted as long as there is no ambiguity, but
+that is not the case here.
+
+\section{Dictionaries (Hashes)}
+\label{hashes}
+
+Dictionaries are {\bf associative arrays}.  The technical meaning of
+this will be discussed below, but from a pure programming point of view,
+this means that one can set up arrays with non-integer indices.  The
+statement
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+x = {'abc':12,'sailing':'away'}
+\end{Verbatim}
+
+sets {\bf x} to what amounts to a 2-element array with {\bf x['abc']}
+being 12 and {\bf x['sailing']} equal to 'away'.  We say that {\bf
+'abc'} and {\bf 'sailing'} are {\bf keys}, and 12 and 'away' are {\bf
+values}.  Keys can be any immmutable object, i.e. numbers, tuples or
+strings.\footnote{Now one sees a reason why Python distinguishes between
+tuples and lists.  Allowing mutable keys would be an implementation
+nightmare, and probably lead to error-prone programming.}  Use of tuples
+as keys is quite common in Python applications, and you should keep in
+mind that this valuable tool is available.
+
+Internally, {\bf x} here would be stored as a 4-element array, and the
+execution of a statement like
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+w = x['sailing']
+\end{Verbatim}
+
+would require the Python interpreter to search through that array for
+the key 'sailing'.  A linear search would be slow, so internal storage
+is organized as a hash table.  This is why Perl's analog of Python's
+dictionary concept is actually called a {\bf hash}.
+
+Here are examples of usage of some of the member functions of the {\bf
+dictionary} class:
+
+\begin{Verbatim}[fontsize=\relsize{-2},numbers=left]
+>>> x = {'abc':12,'sailing':'away'}
+>>> x['abc']
+12
+>>> y = x.keys()
+>>> y
+['abc', 'sailing']
+>>> z = x.values()
+>>> z
+[12, 'away']
+x['uv'] = 2
+>>> x
+{'abc': 12, 'uv': 2, 'sailing': 'away'}
+\end{Verbatim} 
+
+Note how we added a new element to {\bf x} near the end.
+
+The keys need not be tuples.  For example:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> x
+{'abc': 12, 'uv': 2, 'sailing': 'away'}
+>>> f = open('z')
+>>> x[f] = 88
+>>> x
+{<open file 'z', mode 'r' at 0xb7e6f338>: 88, 'abc': 12, 'uv': 2, 'sailing': 'away'}
+\end{Verbatim}
+
+Deletion of an element from a dictionary can be done via {\bf pop()}, e.g.
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> x.pop('abc')
+12
+>>> x
+{<open file 'x', mode 'r' at 0xb7e6f338>: 88, 'uv': 2, 'sailing': 'away'}
+\end{Verbatim}
+
+The {\bf in} operator works on dictionary keys, e.g.
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+>>> x = {'abc': 12, 'uv': 2, 'sailing': 'away'}
+>>> 'uv' in x
+True
+>>> 2 in x
+False
+\end{Verbatim}
+
+\section{Extended Example:  Computing Final Grades}
+
+\begin{Verbatim}[fontsize=\relsize{-2},numbers=left]
+# computes and records final grades
+
+# input line format:
+
+#    name and misc. info, e.g. class level
+#    Final Report grade
+#    Midterm grade
+#    Quiz grades
+#    Homework grades
+
+# comment lines, beginning with #, are ignored for computation but are
+# printed out; thus various notes can be put in comment lines; e.g.
+# notes on missed or makeup exams 
+
+# usage:  
+
+#   python FinalGrades.py input_file nq nqd nh wts 
+
+#      where there are nq Quizzes, the lowest nqd of which will be
+#      deleted; nh Homework assignments; and wts is the set of weights
+#      for Final Report, Midterm, Quizzes and Homework
+
+# outputs to stdout the input file with final course grades appended;
+# the latter are numerical only, allowing for personal inspection of
+# "close" cases, etc.
+
+import sys
+
+def convertltr(lg):  # converts letter grade lg to 4-point-scale
+   if lg == 'F': return 0
+   base = lg[0]
+   olg = ord(base)
+   if len(lg) > 2 or olg < ord('A') or olg > ord('D'):
+      print lg, 'is not a letter grade'
+      sys.exit(1)
+   grade = 4 - (olg-ord('A'))
+   if len(lg) == 2:
+      if lg[1] == '+': grade += 0.3
+      elif lg[1] == '-': grade -= 0.3
+      else:
+         print lg, 'is not a letter grade'
+         sys.exit(1)
+   return grade
+
+def avg(x,ndrop):
+   tmp = []
+   for xi in x: tmp.append(convertltr(xi)) 
+   tmp.sort()
+   tmp = tmp[ndrop:]
+   return float(sum(tmp))/len(tmp)
+
+def main():
+   infile = open(sys.argv[1])
+   nq = int(sys.argv[2])
+   nqd = int(sys.argv[3])
+   nh = int(sys.argv[4])
+   wts = []
+   for i in range(4): wts.append(float(sys.argv[5+i]))
+   for line in infile.readlines():
+      toks = line.split()
+      if toks[0] != '#':
+         lw = len(toks)
+         startpos = lw - nq - nh - 3
+         # Final Report
+         frgrade = convertltr(toks[startpos])
+         # Midterm letter grade (skip over numerical grade)
+         mtgrade = convertltr(toks[startpos+2])
+         startquizzes = startpos + 3
+         qgrade = avg(toks[startquizzes:startquizzes+nq],nqd)
+         starthomework = startquizzes + nq
+         hgrade = avg(toks[starthomework:starthomework+nh],0)
+         coursegrade = 0.0
+         coursegrade += wts[0] * frgrade
+         coursegrade += wts[1] * mtgrade
+         coursegrade += wts[2] * qgrade
+         coursegrade += wts[3] * hgrade
+         print line[:len(line)-1], coursegrade
+      else: 
+         print line[:len(line)-1] 
+
+main()
+\end{Verbatim}
+

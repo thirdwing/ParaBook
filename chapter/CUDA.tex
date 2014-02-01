@@ -1,0 +1,1974 @@
+\chapter{Introduction to GPU Programming with CUDA}
+\label{chap:cuda} 
+
+Even if you don't play video games, you can be grateful to the game
+players, as their numbers have given rise to a class of highly powerful
+parallel processing devices---{\bf graphics processing units} (GPUs).
+Yes, you program right on the video card in your computer, even though
+your program may have nothing to do with graphics or games.
+
+\section{Overview}
+
+The video game market is so lucrative that the industry has developed
+ever-faster GPUs, in order to handle ever-faster and ever-more visually
+detailed video games.  These actually are parallel processing hardware
+devices, so around 2003 some people began to wonder if one might use
+them for parallel processing of nongraphics applications.
+
+Originally this was cumbersome.  One needed to figure out clever ways of
+mapping one's application to some kind of graphics problem, i.e. ways
+to disguising one's problem so that it appeared to be doing graphics
+computations.  Though some high-level interfaces were developed to
+automate this transformation, effective coding required some
+understanding of graphics principles.
+
+But current-generation GPUs separate out the graphics operations, and
+now consist of multiprocessor elements that run under the familiar
+shared-memory threads model.  Thus they are easily programmable.
+Granted, effective coding still requires an intimate knowledge of the
+hardwre, but at least it's (more or less) familiar hardware, not
+requiring knowledge of graphics.
+
+Moreover, unlike a multicore machine, with the ability to run just a few
+threads at one time, e.g. four threads on a quad core machine, GPUs can
+run {\it  hundreds or thousands} of threads at once.  There are various
+restrictions that come with this, but you can see that there is
+fantastic potential for speed here.
+
+NVIDIA has developed the CUDA language as a vehicle for programming on
+their GPUs.  It's basically just a slight extension of C, and has become
+very popular.  More recently, the OpenCL language has been developed by
+Apple, AMD and others (including NVIDIA).  It too is a slight extension
+of C, and it aims to provide a uniform interface that works with
+multicore machines in addition to GPUs.  OpenCL is not yet in as broad
+use as CUDA, so our discussion here focuses on CUDA and NVIDIA GPUs.
+
+Also, the discussion will focus on NVIDIA's Tesla line.  This then led
+to the second generation, Fermi, and then Kepler.  Unless otherwise
+stated, all statements here refer to Tesla.
+
+Some terminology: 
+
+\begin{itemize}
+
+\item A CUDA program consists of code to be run on the {\bf host}, i.e.
+the CPU, and code to run on the {\bf device}, i.e. the GPU.
+
+\item A function that is called by the host to execute on the device is
+called a {\bf kernel}.
+
+\item Threads in an application are grouped into {\bf blocks}.  The
+entirety of blocks is called the {\bf grid} of that application.  
+
+\end{itemize}
+
+\section{Example:  Calculate Row Sums}
+
+Here's a sample program.  And I've kept the sample simple:  It just
+finds the sums of all the rows of a matrix.  
+
+\begin{lstlisting}[numbers=left]
+#include <stdio.h>
+#include <stdlib.h>
+#include <cuda.h>
+
+// CUDA example:  finds row sums of an integer matrix m
+
+// find1elt() finds the rowsum of one row of the nxn matrix m, storing the
+// result in the corresponding position in the rowsum array rs; matrix
+// stored as 1-dimensional, row-major order
+
+__global__ void find1elt(int *m, int *rs, int n)
+{
+   int rownum = blockIdx.x;  // this thread will handle row # rownum
+   int sum = 0;
+   for (int k = 0; k < n; k++)
+      sum += m[rownum*n+k];
+   rs[rownum] = sum;
+}
+
+int main(int argc, char **argv)
+{
+    int n = atoi(argv[1]);  // number of matrix rows/cols
+    int *hm, // host matrix
+        *dm, // device matrix
+        *hrs, // host rowsums
+        *drs; // device rowsums
+    int msize = n * n * sizeof(int);  // size of matrix in bytes
+    // allocate space for host matrix
+    hm = (int *) malloc(msize);  
+    // as a test, fill matrix with consecutive integers
+    int t = 0,i,j;
+    for (i = 0; i < n; i++) {
+       for (j = 0; j < n; j++) {
+          hm[i*n+j] = t++;
+       }
+    }
+    // allocate space for device matrix 
+    cudaMalloc((void **)&dm,msize);
+    // copy host matrix to device matrix
+    cudaMemcpy(dm,hm,msize,cudaMemcpyHostToDevice);
+    // allocate host, device rowsum arrays
+    int rssize = n * sizeof(int);
+    hrs = (int *) malloc(rssize);  
+    cudaMalloc((void **)&drs,rssize);
+    // set up parameters for threads structure
+    dim3 dimGrid(n,1);  // n blocks 
+    dim3 dimBlock(1,1,1);  // 1 thread per block
+    // invoke the kernel
+    find1elt<<<dimGrid,dimBlock>>>(dm,drs,n);
+    // wait for kernel to finish
+    cudaThreadSynchronize();
+    // copy row vector from device to host
+    cudaMemcpy(hrs,drs,rssize,cudaMemcpyDeviceToHost);
+    // check results
+    if (n < 10) for(int i=0; i<n; i++) printf("%d\n",hrs[i]);
+    // clean up
+    free(hm);
+    cudaFree(dm);
+    free(hrs);
+    cudaFree(drs);
+}
+\end{lstlisting}
+
+This is mostly C, with a bit of CUDA added here and there.  Here's
+how the program works:
+
+\begin{itemize}
+
+\item Our {\bf main()} runs on the host.  
+
+\item Kernel functions are identified by {\bf \_\_global\_\_ void}.
+They are called by the host and run on the device, thus serving as
+entries to the device.  
+
+We have only one kernel invocation here, but could have many, say with
+the output of one serving as input to the next.
+
+\item Other functions that will run on the device, called by functions
+running on the device, must be identified by {\bf \_\_device\_\_}, e.g.
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+__device__ int sumvector(float *x, int n)
+\end{Verbatim}
+
+Note that unlike kernel functions, device functions can have return
+values, e.g. {\bf int} above.
+
+\item When a kernel is called, each thread runs it.  Each thread
+receives the same arguments. 
+
+% \item The kernel may call other functions to run on the device, 
+% using data stored in the device memory.  Such functions may in turn make
+% such calls.
+
+\item Each block and thread has an ID, stored in programmer-accessible 
+structs {\bf blockIdx} and {\bf threadIdx}.  We'll discuss the 
+details later, but for now, we'll just note that here the statement 
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+int rownum = blockIdx.x; 
+\end{Verbatim}
+
+picks up the block number, which our code in this example uses to
+determine which row to sum.
+
+\item One calls {\bf cudaMalloc()} on the host to dynamically allocate
+space on the device's memory.\footnote{This function 
+cannot be called from the device itself.   However, {\bf malloc()} is
+available from the device, and device memory allocated by it can be
+copied to the host.  See the NVIDIA programming guide for details.}
+Execution of the statement
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+cudaMalloc((void **)&drs,rssize);
+\end{Verbatim}
+
+allocates space {\it on the device}, pointed to by {\bf drs}, a variable
+in the {\it host's} address space.
+
+The space allocated by a {\bf cudaMalloc()} call on the device is global
+to all kernels, and resides in the global memory of the device (details
+on memory types later).
+
+One can also allocate device memory statically.  For example, the
+statement
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+__device int z[100];
+\end{Verbatim}
+
+appearing outside any function definition would allocate space on device
+global memory, with scope global to all kernels.  However, it is not
+accessible to the host.
+
+\item Data is transferred to and from the host and device memories via
+{\bf cudaMemcpy()}.  The fourth argument specifies the direction, e.g.
+cudaMemcpyHostToDevice, cudaMemcpyDeviceToHost or
+cudaMemcpyDeviceToDevice.
+
+\item Kernels return {\bf void} values, so values are returned
+via a kernel's arguments.  
+
+\item Device functions (which we don't have here) can return values.
+They are called only by kernel functions or other device functions.
+
+\item Note carefully that a call to the kernel doesn't block; it returns
+immediately.  For that reason, the code above has a host barrier call,
+to avoid copying the results back to the host from the device before
+they're ready:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+cudaThreadSynchronize();
+\end{Verbatim}
+
+On the other hand, if our code were to have another kernel call, say on
+the next line after 
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+find1elt<<<dimGrid,dimBlock>>>(dm,drs,n);
+\end{Verbatim}
+
+and if some of the second call's input arguments were the outputs of the
+first call, there would be an implied barrier betwwen the two calls; the
+second would not start execution before the first finished.
+
+Calls like {\bf cudaMemcpy()} do block until the operation completes.
+
+There is also a thread barrier available for the threads themselves, at
+the block level.  The call is
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+__syncthreads();
+\end{Verbatim}
+
+This can only be invoked by threads within a block, not across blocks.
+In other words, this is barrier synchronization within blocks.
+
+\item I've written the program so that each thread will handle one row
+of the matrix.  I've chosen to store the matrix in one-dimensional form
+in row-major order, and the matrix is of size n x n, so the loop
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+for (int k = 0; k < n; k++)
+   sum += m[rownum*n+k];
+\end{Verbatim}
+
+will indeed traverse the n elements of row number {\bf rownum}, and
+compute their sum.  That sum is then placed in the proper element of the
+output array:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+rs[rownum] = sum;
+\end{Verbatim}
+
+\item After the kernel returns, the host must copy the result back from the
+device memory to the host memory, in order to access the results of the
+call.
+
+\end{itemize}
+
+\section{Understanding the Hardware Structure}
+
+{\it Scorecards, get your scorecards here!  You can't tell the players
+without a scorecard}---classic cry of vendors at baseball games
+
+{\it Know thy enemy}---Sun Tzu, {\it The Art of War}
+
+The enormous computational potential of GPUs cannot be unlocked without
+an intimate understanding of the hardware.  This of course is a 
+fundamental truism in the parallel processing world, but it is acutely
+important for GPU programming.  This section presents an overview of the
+hardware. 
+
+\subsection{Processing Units}
+
+A GPU consists of a large set of {\bf streaming multiprocessors} (SMs).
+Since each SM is essentially a multicore machine in its own right, you
+might say the GPU is a multi-multiprocessor machine.  
+
+Each SM consists of a number of {\bf streaming processors} (SPs),
+individual cores.  The cores run threads, as with ordinary cores, but
+threads in an SM run in lockstep, to be explained below.
+
+It is important to understand the motivation for this SM/SP hierarchy:
+Two threads located in different SMs cannot synchronize with each other
+in the barrier sense.  Though this sounds like a negative at first, it
+is actually a great advantage, as the independence of threads in
+separate SMs means that the hardware can run faster.  So, if the CUDA
+application programmer can write his/her algorithm so as to have certain
+independent chunks, and those chunks can be assigned to different SMs
+(we'll see how, shortly), then that's a ``win.''
+
+Note that at present, word size is 32 bits.  Thus for instance
+floating-point operations in hardware were originally in single precision
+only, though newer devices are capable of double precision.
+
+\subsection{Thread Operation}
+
+GPU operation is highly threaded, and again, understanding of the
+details of thread operation is key to good performance.
+
+\subsubsection{SIMT Architecture}
+
+When you write a CUDA application program, you partition the threads
+into groups called {\bf blocks}.  The hardware will assign an entire
+block to a single SM, though several blocks can run in the same SM.  The
+hardware will then divide a block into {\bf warps}, 32 threads to a
+warp.  Knowing that the hardware works this way, the programmer controls
+the block size and the number of blocks, and in general writes the code
+to take advantage of how the hardware works.  
+
+The central point is that {\it all the threads in a warp run the code in
+lockstep}.  During the machine instruction fetch cycle, the same
+instruction will be fetched for all of the threads in the warp.  Then in
+the execution cycle, each thread will either execute that particular
+instruction or execute nothing.   The execute-nothing case occurs in the
+case of branches; see below.  This is the classical {\bf single
+instruction, multiple data} (SIMD) pattern used in some early
+special-purpose computers such as the ILLIAC; here it is called {\bf
+single instruction, multiple thread} (SIMT).
+
+The syntactic details of grid and block configuration will be presented
+in Section \ref{threadshierarchy}.
+
+\subsubsection{The Problem of Thread Divergence}
+
+{\it The SIMT nature of thread execution has major implications for
+performance.}  Consider what happens with if/then/else code.  If some
+threads in a warp take the ``then'' branch and others go in the ``else''
+direction, they cannot operate in lockstep.  That means that some
+threads must wait while others execute.  This renders the code at that
+point serial rather than parallel, a situation called {\bf thread
+divergence}.  As one CUDA Web tutorial points out, this can be a
+``performance killer.''  (On the other hand, threads in the same block
+but in different warps can diverge with no problem.)
+
+\subsubsection{``OS in Hardware''}
+
+Each SM runs the threads on a timesharing basis, just like an operating
+system (OS).  This timesharing is implemented in the hardware, though,
+not in software as in the OS case.  
+
+The ``hardware OS'' runs largely in analogy with an ordinary OS:
+
+\begin{itemize}
+
+\item A process in an ordinary OS is given a fixed-length timeslice, so
+that processes take turns running. In a GPU's hardware OS, warps take
+turns running, with fixed-length timeslices.
+
+\item With an ordinary OS, if a process reaches an input/output
+operation, the OS suspends the process while I/O is pending, even if its
+turn is not up.  The OS then runs some other process instead, so as to
+avoid wasting CPU cycles during the long period of time needed for the
+I/O.  
+
+With an SM, though, the analogous situation occurs when there is a long
+memory operation, to global memory; if a a warp of threads needs to
+access global memory (including local memory; see below), the SM will
+schedule some other warp while the memory access is pending.
+
+\end{itemize}
+
+The hardware support for threads is extremely good; a context switch
+takes very little time, quite a contrast to the OS case.  Moreover, as
+noted above, the long latency of global memory may be solvable by having
+a lot of threads that the hardware can timeshare to hide that latency;
+while one warp is fetching data from memory, another warp can be
+executing, thus not losing time due to the long fetch delay.  For these
+reasons, CUDA programmers typically employ a large number of threads,
+each of which does only a small amount of work---again, quite a contrast
+to something like OpenMP.
+
+\subsection{Memory Structure}
+
+The GPU memory hierarchy plays a key role in performance.  Let's discuss
+the most important two types of memory first---shared and global.  
+
+\subsubsection{Shared and Global Memory}
+
+Here is a summary:
+
+\begin{tabular}{|r|r|r|}
+\hline
+type & shared & global \\ \hline 
+\hline
+scope & glbl. to block  & glbl. to app. \\ \hline 
+size & small & large \\ \hline 
+location & on-chip & off-chip \\ \hline 
+speed & blinding & molasses \\ \hline
+lifetime & kernel & application \\ \hline 
+host access? & no & yes \\ \hline 
+cached? & no & no \\ \hline 
+\end{tabular}
+
+In prose form:
+
+\begin{itemize}
+
+\item Shared memory:  All the threads in an SM share this memory, and
+use it to communicate among themselves, just as is the case with threads
+in CPUs.  Access is very fast, as this memory is on-chip.  It is
+declared inside the kernel, or in the kernel call (details below).
+
+On the other hand, shared memory is small, currently 16K bytes per SM,
+and the data stored in it are valid only for the life of the
+currently-executing kernel.  Also, shared memory cannot be accessed
+by the host.
+
+\item Global memory:  This is shared by all the threads in an entire
+application, and is persistent across kernel calls, throughout the
+life of the application, i.e. until the program running on the host
+exits.  It is usually much larger than shared memory.  It is accessible
+from the host.  Pointers to global memory can (but do not have to) be
+declared outside the kernel. 
+
+On the other hand, global memory is off-chip and very slow, taking
+hundreds of clock cycles per access instead of just a few.  As noted
+earlier, this can be ameliorated by exploiting latency hiding; we will
+elaborate on this in Section \ref{coal}.
+
+\end{itemize}
+
+The reader should pause here and reread the above comparison between
+shared and global memories.  {\it The key implication is that shared
+memory is used essentially as a programmer-managed cache.} Data will
+start out in global memory, but if a variable is to be accessed multiple
+times by the GPU code, it's probably better for the programmer to
+write code that copies it to shared memory, and then access the copy
+instead of the original.  If the variable is changed and is to be
+eventually transmitted back to the host, the programmer must include
+code to copy it back to global memory.
+
+Accesses to global and shared memory are done via half-warps, i.e. an
+attempt is made to do all memory accesses in a half-warp simultaneously.
+In that sense, only threads in a half-warp run simultaneously, but the
+full warp is {\it scheduled} to run contemporaneously by the hardware
+OS, first one half-warp and then the other.
+
+The host can access global memory via {\bf cudaMemcpy()}, as seen
+earlier.  It cannot access shared memory.  Here is a typical pattern:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+__global__ void abckernel(int *abcglobalmem)
+{
+   __shared__ int abcsharedmem[100];
+   // ... code to copy some of abcglobalmem to some of abcsharedmem
+   // ... code for computation
+   // ... code to copy some of abcsharedmem to some of abcglobalmem
+}
+\end{Verbatim}
+
+Typically you would write the code so that each thread deals with its
+own portion of the shared data, e.g. its own portion of {\bf
+abcsharedmem} and {\bf abcglobalmem} above.  However, all the threads in
+that block can read/write any element in {\bf abcsharedmem}. 
+
+Shared memory consistency (recall Section \ref{consistency}) is
+sequential within a thread, but {\bf relaxed} among threads in a block:
+A write by one thread is not guaranteed to be visible to the others in a
+block until {\bf \_\_syncthreads()} is called.  On the other hand,
+writes by a thread {\it will} be visible to that same thread in
+subsequent reads without calling {\bf \_\_syncthreads()}.  Among the
+implications of this is that if each thread writes only to portions of
+shared memory that are not read by other threads in the block, then {\bf
+\_\_syncthreads()} need not be called.
+
+In the code fragment above, we allocated the shared memory through a
+C-style declaration:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+__shared__ int abcsharedmem[100];
+\end{Verbatim}
+
+It is also possible to allocate shared memory in the kernel call, along
+with the block and thread configuration.  Here is an example:
+
+\begin{lstlisting}[numbers=left]
+#include <stdio.h>
+#include <stdlib.h>
+#include <cuda.h>
+
+// CUDA example:  illustrates kernel-allocated shared memory; does
+// nothing useful, just copying an array from host to device global,
+// then to device shared, doubling it there, then copying back to device
+// global then host
+
+__global__ void doubleit(int *dv, int n)
+{  extern __shared__ int sv[];
+   int me = threadIdx.x;  
+   // threads share in copying dv to sv, with each thread copying one
+   // element
+   sv[me] = 2 * dv[me];
+   dv[me] = sv[me];
+}
+
+int main(int argc, char **argv)
+{
+    int n = atoi(argv[1]);  // number of matrix rows/cols
+    int *hv, // host array
+        *dv; // device array
+    int vsize = n * sizeof(int);  // size of array in bytes
+    // allocate space for host array
+    hv = (int *) malloc(vsize);  
+    // fill test array with consecutive integers
+    int t = 0,i;
+    for (i = 0; i < n; i++) 
+       hv[i] = t++;
+    // allocate space for device array 
+    cudaMalloc((void **)&dv,vsize);
+    // copy host array to device array
+    cudaMemcpy(dv,hv,vsize,cudaMemcpyHostToDevice);
+    // set up parameters for threads structure
+    dim3 dimGrid(1,1);
+    dim3 dimBlock(n,1,1);  // all n threads in the same block
+    // invoke the kernel; third argument is amount of shared memory
+    doubleit<<<dimGrid,dimBlock,vsize>>>(dv,n);
+    // wait for kernel to finish
+    cudaThreadSynchronize();
+    // copy row array from device to host
+    cudaMemcpy(hv,dv,vsize,cudaMemcpyDeviceToHost);
+    // check results
+    if (n < 10) for(int i=0; i<n; i++) printf("%d\n",hv[i]);
+    // clean up
+    free(hv);
+    cudaFree(dv);
+}
+\end{lstlisting}
+
+Here the variable {\bf sv} is kernel allocated.  It's declared in
+the statement
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+extern __shared__ int sv[];
+\end{Verbatim}
+
+but actually allocated during the kernel invocation
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+doubleit<<<dimGrid,dimBlock,vsize>>>(dv,n);
+\end{Verbatim}
+
+in that third argument within the chevrons, {\bf vsize}.
+
+Note that one can only directly declare one region of space in this
+manner.  This has two implications:
+
+\begin{itemize}
+
+\item Suppose we have two {\bf \_\_device\_\_} functions, each declared
+an {\bf extern \_\_shared\_\_} array like this.  Those two arrays will
+occupy the same place in memory!
+
+\item Suppose within one {\bf \_\_device\_\_} function, we wish to have
+two {\bf extern \_\_shared\_\_} arrays.  We cannot do that literally,
+but we can share the space via subarrays, e.g.:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+int *x = &sv[120];
+\end{Verbatim}
+
+would set up {\bf x} as a subarray of {\bf sv} above, starting at
+element 120.
+
+\end{itemize}
+
+One can also set up shared arrays of fixed length in the same code.
+Declare them before the variable-length one.  
+
+In our example above, the array {\bf sv} is syntactically local to the
+function {\bf doubleit()}, but is shared by all invocations of that
+function in the block, thus acting ``global'' to them in a sense.  But
+the point is that it is not accessible from within {\it other} functions
+running in that block.  In order to achieve the latter situation, a
+shared array can be declared outside any function.  
+
+\subsubsection{Global-Memory Performance Issues}
+\label{coal}
+
+As noted, the latency (Section \ref{latencybandwidth}) for global memory
+is quite high, on the order of hundreds of clock cycles.  However, the
+hardware attempts to ameliorate this problem in a couple of ways.
+
+First, as mentioned earlier, if a warp has requested a global memory
+access that will take a long time, the hardware will schedule another
+warp to run while the first is waiting for the memory access to
+complete.  This is an example of a common parallel processing technique
+called {\bf latency hiding}.
+
+Second, the bandwidth (Section \ref{latencybandwidth}) to global memory
+can be high, due to hardware actions called {\bf coalescing}.  This
+simply means that if the hardware sees that the threads in this
+half-warp (or at least the ones currently accessing global memory) are
+accessing consecutive words, the hardware can execute the memory
+requests in groups of up to 32 words at a time.  This works because the
+memory is low-order interleaved (Section \ref{interleaving}), and is
+true for both reads and writes.
+
+The newer GPUs go even further, coalescing much more general access
+patterns, not just to consecutive words.
+
+The programmer may be able to take advantage of coalescing, by a
+judicious choice of algorithms and/or by inserting padding into arrays
+(Section \ref{bankclash}).
+
+% Global memory is organized into {\bf partitions} of 256 bytes each.
+% There will be six or eight partitions, depending on the GPU model.
+
+\subsubsection{Shared-Memory Performance Issues}
+
+Shared memory is divided into banks, in a low-order interleaved
+manner (recall Section \ref{banks}):  Words with consecutive addresses
+are stored in consecutive banks, mod the number of banks, i.e.  wrapping
+back to 0 when hitting the last bank.  If for instance there are 8
+banks, addresses 0, 8, 16,... will be in bank 0, addresses 1, 9, 17,...
+will be in bank 1 and so on.  (Actually, older devices have 16 banks,
+while newer ones have 32.) The fact that all memory accesses in a
+half-warp are attempted simultaneously implies that the best access to
+shared memory arises when the accesses are to different banks, just as
+for the case of global memory.  
+
+An exception occurs in {\bf broadcast}.  If all threads in the block
+wish to read from the same word in the same bank, the word will be sent
+to all the requestors simultaneously without conflict.  However, if only
+some theads try to read the same word, there may or may not be a
+conflict, as the hardware chooses a bank for broadcast in some
+unspecified way.
+
+As in the discussion of global memory above, we should write our code to
+take advantage of these structures.
+
+The biggest performance issue with shared memory is its size, as little
+as 16K per SM in many GPU cards.  And remember, this is divvied up among
+the blocks on a given SM.  If we have 4 blocks running on an SM, each
+one can only use 16K/4 = 4K bytes of shared memory.
+
+\subsubsection{Host/Device Memory Transfer Performance Issues}
+
+Copying data between host and device can be a major bottleneck.  One way
+to ameliorate this is to use {\bf cudaMallocHost()} instead of {\bf
+malloc()} when allocating memory on the host.  This sets up page-locked
+memory, meaning that it cannot be swapped out by the OS' virtual memory
+system.  This allows the use of DMA hardware to do the memory copy, 
+said to make {\bf cudaMemcpy()} twice as fast.
+
+\subsubsection{Other Types of Memory}
+\label{othermems}
+
+There are also other types of memory.  Again, let's start with a
+summary:
+
+\begin{tabular}{|r|r|r|r|r|}
+\hline
+type & registers & local & constant & texture \\ \hline 
+\hline
+scope & single thread & single thread & glbl. to app. & glbl. to app.\\ \hline 
+location & device & device & host+device cache & host+device cache\\ \hline 
+speed & fast & molasses & fast if cache hit & fast if cache hit \\ \hline
+lifetime & kernel & kernel & application & application \\ \hline 
+host access? & no & no & yes & yes \\ \hline 
+device access? & read/write & read/write & read & read \\ \hline 
+\end{tabular}
+
+\begin{itemize}
+
+\item {\bf Registers:}  
+
+Each SM has a set of registers, much more numerous than in a CPU.
+Access to them is very fast, said to be slightly faster than to shared
+memory.
+
+The compiler normally stores the local variables for a device function
+in registers, but there are exceptions.  An array won't be placed in
+registers if the array is too large, or if the array has variable index
+values, such as
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+int z[20],i;
+...
+y = z[i];
+\end{Verbatim}
+
+Since registers are not indexable by the hardware, the compiler cannot
+allocate {\bf z} to registers in this case.  If on the other hand, the
+only code accessing {\bf z} has constant indices, e.g. {\bf z[8]}, the
+compiler may put {\bf z} in registers.
+
+\item {\bf Local memory:}  
+
+This is physically part of global memory, but is an area within that
+memory that is allocated by the compiler for a given thread.  As such,
+it is slow, and accessible only by that thread.  The compiler allocates
+this memory for local variables in a device function if the compiler
+cannot store them in registers.  This is called {\bf register spill}.
+
+\item {\bf Constant memory:}  
+
+As the name implies, it's read-only from the device (read/write by the
+host), for storing values that will not be changed by device code.  It
+is off-chip, thus potentially slow, but has a cache on the chip.  At
+present, the size is 64K.
+
+One designates this memory with {\bf \_\_constant\_\_}, as a global
+variable in the source file.  One sets its contents from the host via
+{\bf cudaMemcpyToSymbol()}, whose (simple form for the) call is
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+cudaMemcpyToSymbol(var_name,pointer_to_source,number_bytes_copy,cudaMemcpyHostToDevice)
+\end{Verbatim}
+
+For example:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+__constant__ int x;  // not contained in any function
+
+// host code
+int y = 3;
+cudaMemcpyToSymbol("x",&y,sizeof(int));
+...
+
+// device code
+int z;
+z = x;
+\end{Verbatim}
+
+Note again that the name Constant refers to the fact that device code
+cannot change it.  But host code certainly can change it between kernel
+calls.  This might be useful in iterative algorithms like this:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+/ host code
+for 1 to number of iterations
+   set Constant array x
+   call kernel (do scatter op)
+   cudaThreadSynchronize()
+   do gather op, using kernel results to form new x
+
+// device code
+use x together with thread-specific data
+return results to host
+\end{Verbatim}
+
+\item {\bf Texture:}
+
+This is similar to constant memory, in the sense that it is read-only
+and cached.  The difference is that the caching is two-dimensional.  The
+elements {\bf a[i][j]} and {\bf a[i+1][j]} are far from each other in
+the global memory, but since they are ``close'' in a two-dimensional
+sense, they may reside in the same cache line.
+
+\end{itemize}
+
+\subsection{Threads Hierarchy}
+\label{threadshierarchy}
+
+Following the hardware, threads in CUDA software follow a hierarchy:
+
+\begin{itemize}
+
+\item The entirety of threads for an application is called a {\bf grid}.  
+
+\item A grid consists of one or more {\bf blocks} of threads.
+
+\item Each block has its own ID within the grid, consisting of an ``x
+coordinate'' and a ``y coordinate.''  
+
+\item Likewise each thread has x, y and z coordinates within whichever
+block it belongs to.  
+
+\item Just as an ordinary CPU thread needs to be able to sense its ID, e.g.
+by calling {\bf omp\_get\_thread\_num()} in OpenMP, CUDA threads need
+to do the same.  A CUDA thread can access its block ID via the built-in
+variables {\bf blockIdx.x} and {\bf blockIdx.y}, and can access its
+thread ID within its block via {\bf threadIdx.x}, {\bf threadIdx.y} and
+{\bf threadIdx.z}.
+
+\item The programmer specifies the grid size (the numbers of rows and
+columns of blocks within a grid) and the block size (numbers of rows,
+columns and layers of threads within a block).  In the first example
+above, this was done by the code
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+dim3 dimGrid(n,1);
+dim3 dimBlock(1,1,1);
+find1elt<<<dimGrid,dimBlock>>>(dm,drs,n);
+\end{Verbatim}
+
+Here the grid is specified to consist of n ($n \times 1$) blocks,
+and each block consists of just one ($1 \times 1 \times 1)$ thread.
+
+That last line is of course the call to the kernel.  As you can see,
+CUDA extends C syntax to allow specifying the grid and block sizes.
+CUDA will store this information in structs of type {\bf dim3}, in this
+case our variables {\bf gridDim} and {\bf blockDim}, accessible to the
+programmer, again with member variables for the various dimensions, e.g.
+{\bf blockDim.x} for the size of the X dimension for the number of
+threads per block.
+
+\item All threads in a block run in the same SM, though more than
+one block might be on the same SM.
+
+\item The ``coordinates'' of a block within the grid, and of a thread
+within a block, are merely abstractions.  If for instance one is
+programming computation of heat flow across a two-dimensional slab, the
+programmer may find it clearer to use two-dimensional IDs for the
+threads.  {\it But this does not correspond to any physical arrangement
+in the hardware.}
+
+\end{itemize}
+
+As noted, the motivation for the two-dimensional block arrangment is to
+make coding conceptually simpler for the programmer if he/she is working
+an application that is two-dimensional in nature.  
+
+For example, in a matrix application one's parallel algorithm might be
+based on partitioning the matrix into rectangular submatrices ({\bf
+tiles}), as we'll do in Section \ref{partitioned}.  In a small example
+there, the matrix
+
+\begin{equation}
+A = 
+\left (
+\begin{array}{ccc}
+1 & 5 & 12 \\
+0 & 3 & 6 \\
+4 & 8 & 2
+\end{array}
+\right )
+\end{equation}
+
+is partitioned as 
+
+\begin{equation}
+A =
+\left (
+\begin{array}{cc}
+A_{00} & A_{01} \\
+A_{10} & A_{11}
+\end{array}
+\right ) ,
+\end{equation}
+
+where
+
+\begin{equation}
+A_{00} =
+\left (
+\begin{array}{cc}
+1 & 5 \\
+0 & 3
+\end{array}
+\right )  ,
+\end{equation}
+
+\begin{equation}
+A_{01} =
+\left (
+\begin{array}{cc}
+12 \\
+6 
+\end{array}
+\right ),
+\end{equation}
+
+\begin{equation}
+A_{10} =
+\left (
+\begin{array}{cc}
+4 & 8 
+\end{array}
+\right )  
+\end{equation}
+
+and
+
+\begin{equation}
+A_{11} =
+\left (
+\begin{array}{c}
+2
+\end{array}
+\right ).
+\end{equation}
+
+We might then have one block of threads handle $A_{00}$, another block
+handle $A_{01}$ and so on.  CUDA's two-dimensional ID system for blocks
+makes life easier for programmers in such situations.  
+
+\subsection{What's NOT There}
+
+{\it We're not in Kansas anymore, Toto}---character Dorothy Gale in {\it
+The Wizard of Oz}
+
+It looks like C, it feels like C, and for the most part, it {\it is} C.
+But in many ways, it's quite different from what you're used to:
+
+\begin{itemize}
+
+\item You don't have access to the C library, e.g. {\bf printf()} (the
+library consists of host machine language, after all).  There are
+special versions of math functions, however, e.g. {\bf \_\_sin()}.
+
+\item No recursion.
+
+\item No stack.  Functions are essentially inlined, rather than their 
+calls being handled by pushes onto a stack.
+
+\item No pointers to functions.
+
+\end{itemize}
+
+\section{Synchronization, Within and Between Blocks}
+
+As mentioned earlier, a barrier for the threads in the same block is
+available by calling {\bf \_\_syncthreads()}.  Note carefully that if
+one thread writes a variable to shared memory and another then reads
+that variable, one must call this function (from both threads) in order
+to get the latest value.  Keep in mind that within a block, different
+warps will run at different times, making synchronization vital.
+
+Remember too that  threads across blocks cannot sync with each other in
+this manner.  There are, though, several {\bf atomic}
+operations---read/modify/write actions that a thread can execute without
+{\bf pre-emption}, i.e. without interruption---available on both global
+and shared memory.  For example, {\bf atomicAdd()} performs a
+fetch-and-add operation, as described in Section \ref{fanda} of this
+book.  The call is
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+atomicAdd(address of integer variable,inc);
+\end{Verbatim}
+
+where {\bf address of integer variable} is the address of the (device)
+variable to add to, and {\bf inc} is the amount to be added.  The return
+value of the function is the value originally at that address before the
+operation.
+
+There are also {\bf atomicExch()} (exchange the two operands), {\bf
+atomicCAS()} (if the first operand equals the second, replace the first
+by the third), {\bf atomicMin()}, {\bf atomicMax()}, {\bf atomicAnd()},
+{\bf atomicOr()}, and so on.
+
+Use {\bf -arch=sm\_11} when compiling, e.g.
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+nvcc -g -G yoursrc.cu -arch=sm_11
+\end{Verbatim}
+
+Though a barrier could in principle be constructed from the atomic
+operations, its overhead would be quite high.  In earlier models that
+was near a microsecond, and though that problem has been ameliorated in
+more recent models, implementing a barrier in this manner .  would not
+be not much faster than attaining interblock synchronization by
+returning to the host and calling {\bf cudaThreadSynchronize()} there.
+Recall that the latter {\it is} a possible way to implement a barrier,
+since global memory stays intact in between kernel calls, but again, it
+would be slow.
+
+So, what if synchronization is really needed?  This is the case, for
+instance, for iterative algorithms, where all threads must wait at the
+end of each iteration.
+
+If you have a small problem, maybe you can get satisfactory performance
+by using just one block.  You'll have to use a larger granularity, i.e.
+more work assigned to each thread.  But using just one block means
+you're using only one SM, thus only a fraction of the potential power of
+the machine.  
+
+If you use multiple blocks, though, your only feasible option for
+synchronization is to rely on returns to the host, where synchronization
+occurs via {\bf cudaThreadSynchronize()}.  You would then have the
+situation outlined in the discussion of Constant memory in Section
+\ref{othermems}.
+
+\section{More on the Blocks/Threads Tradeoff}
+
+Resource size considerations must be kept in mind when you design your
+code and your grid configuration.  In particular, note the following:
+
+   \begin{itemize}
+
+   \item Each block in your code is assigned to some SM.  It will be
+   tied to that SM during the entire execution of your kernel, though of
+   course it will not constantly be running during that time. 
+
+   \item If there are more blocks than can be accommodated by all the
+   SMs, then some blocks will need to wait for assignment; when a block
+   finishes, that block's resources, e.g. shared memory, can now be
+   assigned to a waiting block.
+
+   \item The programmer has no control over which block is assigned to
+   which SM.
+
+   \item Within a block, threads execute by the warp, 32 threads.  At
+   any give time, the SM is running one warp, chosen by the GPU OS.
+   
+   \item The GPU has a limit on the number of threads that can run on a
+   single block, typically 512, and on the total number of threads running  
+   on an SM, 786.
+
+   \item If a block contains fewer than 32 threads, only part of the
+   processing power of the SM it's running on will be used.  So block
+   size should normally be at least 32.  Moreover, for the same reason,
+   block size should ideally be a multiple of 32. 
+
+   \item If your code makes used of shared memory, or does within-block
+   synchronization, the larger the block size, the better.
+
+   \item We want to use the full power of the GPU, with its many SMs,
+   thus implying a need to use at least as many blocks as there are SMs
+   (which may require smaller blocks).
+
+   \item Moreover, due to the need for latency hiding in memory access,
+   we want to have lots of warps, so that some will run while others
+   are doing memory access.
+
+   \item Two threads doing unrelated work, or the same work but with
+   many if/elses, would cause a lot of thread divergence if they were in
+   the same block.
+
+   \item A commonly-cited rule of thumb is to have between 128 and 256
+   threads per block.
+
+   \end{itemize}
+
+Though there is a limit on the number of blocks, this limit will be much
+larger than the number of SMs.  So, you may have multiple blocks running
+on the same SM.  Since execution is scheduled by the warp anyway, there
+appears to be no particular drawback to having more than one block on
+the same SM.
+
+\section{Hardware Requirements, Installation, Compilation, Debugging}
+
+You do need a suitable NVIDIA video card.  There is a list at
+\url{http://www.nvidia.com/object/cuda_gpus.html}; see also the
+Wikipedia entry, \url{http://en.wikipedia.org/wiki/CUDA#Supported_GPUs}.
+If you have a Linux system, run {\bf lspci} to determine what kind you
+have.\footnote{It might be in {\bf /sbin}.}
+
+Download the CUDA toolkit from NVIDIA.  Just plug ``CUDA download'' into
+a Web search engine to find the site.  Install as directed.
+
+You'll need to set your search and library paths to include the CUDA {\bf
+bin} and {\bf lib} directories.
+
+To compile {\bf x.cu} (and yes, use the {\bf .cu} suffix), type
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+$ nvcc -g -G x.cu 
+\end{Verbatim}
+
+The {\bf -g -G} options are for setting up debugging, the first for host
+code, the second for device code.  You may also need to specify
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+-I/your_CUDA_include_path
+\end{Verbatim}
+
+to pick up the file {\bf cuda.h}.  Run the code as you normally would.
+
+You may need to take special action to set your library path properly.
+For example, on Linux machines, set the environment variable {\bf
+LD\_LIBRARY\_PATH} to include the CUDA library.
+
+To determine the limits, e.g. maximum number of threads, for your
+device, use code like this:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+cudaDeviceProp Props;
+cudaGetDeviceProperties(&Props,0);
+\end{Verbatim}
+
+The 0 is for device 0, assuming you only have one device.  The return
+value of {\bf cudaGetDeviceProperties()} is a complex C struct
+whose components are listed at
+\url{http://developer.download.nvidia.com/compute/cuda/2_3/toolkit/docs/online/group__CUDART__DEVICE_g5aa4f47938af8276f08074d09b7d520c.html}.
+
+Here's a simple program to check some of the properties of device 0:
+
+\begin{lstlisting}[numbers=left]
+#include<cuda.h>
+#include <stdio.h>
+
+int main()
+{
+   cudaDeviceProp Props;
+   cudaGetDeviceProperties( &Props,0);
+
+   printf("shared mem: %d)\n", Props.sharedMemPerBlock);
+   printf("max threads/block: %d\n",Props.maxThreadsPerBlock);
+   printf("max blocks: %d\n",Props.maxGridSize[0]);
+   printf("total Const mem: %d\n",Props.totalConstMem);
+}
+\end{lstlisting}
+
+Under older versions of CUDA, such as 2.3, one can debug using GDB as
+usual.  You must compile your program in emulation mode, using the {\bf
+-deviceemu} command-line option.  This is no longer available as of
+version 3.2.  CUDA also includes a special version of GDB, CUDA-GDB
+(invoked as {\bf cuda-gdb}) for real-time debugging.  However, on
+Unix-family platforms it runs only if X11 is not running.  Short of
+dedicating a machine for debugging, you may find it useful to install a
+version 2.3 in addition to the most recent one to use for debugging.
+
+\section{Example:  Improving the Row Sums Program}
+
+The issues involving coalescing in Section \ref{coal} would suggest that
+our rowsum code might run faster with column sums, to take advantage of
+the memory banking.  (So the user would either need to take the
+transpose first, or have his code set up so that the matrix is in
+transpose form to begin with.) As two threads in the same half-warp
+march down adjoining columns in lockstep, they will always be accessing
+adjoining words in memory.  
+
+So, I modified the program accordingly (not shown), and compiled the two
+versions, as {\bf rs} and {\bf cs}, the row- and column-sum versions of
+the code, respectively.
+
+This did produce a small improvement (confirmed in subsequent runs,
+needed in any timing experiment):
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+pc5:~/CUDA% time rs 20000
+2.585u 1.753s 0:04.54 95.3%     0+0k 7104+0io 54pf+0w
+pc5:~/CUDA% time cs 20000
+2.518u 1.814s 0:04.40 98.1%     0+0k 536+0io 5pf+0w
+\end{Verbatim}
+
+But let's compare it to a version running only on the CPU,
+
+\begin{lstlisting}[numbers=left]
+#include <stdio.h>
+#include <stdlib.h>
+
+// non-CUDA example:  finds col sums of an integer matrix m
+
+// find1elt() finds the colsum of one col of the nxn matrix m, storing the
+// result in the corresponding position in the colsum array cs; matrix
+// stored as 1-dimensional, row-major order
+
+void find1elt(int *m, int *cs, int n)
+{
+   int sum=0;
+   int topofcol;
+   int col,k;
+   for (col = 0; col < n; col++) {
+      topofcol = col;
+      sum = 0;
+      for (k = 0; k < n; k++)
+         sum += m[topofcol+k*n];
+      cs[col] = sum;
+   }
+}
+
+int main(int argc, char **argv)
+{
+    int n = atoi(argv[1]);  // number of matrix cols/cols
+    int *hm, // host matrix
+        *hcs; // host colsums
+    int msize = n * n * sizeof(int);  // size of matrix in bytes
+    // allocate space for host matrix
+    hm = (int *) malloc(msize);  
+    // as a test, fill matrix with consecutive integers
+    int t = 0,i,j;
+    for (i = 0; i < n; i++) {
+       for (j = 0; j < n; j++) {
+          hm[i*n+j] = t++;
+       }
+    }
+    int cssize = n * sizeof(int);
+    hcs = (int *) malloc(cssize);  
+    find1elt(hm,hcs,n);
+    if (n < 10) for(i=0; i<n; i++) printf("%d\n",hcs[i]);
+    // clean up
+    free(hm);
+    free(hcs);
+}
+\end{lstlisting}
+
+How fast does this non-CUDA version run?
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+pc5:~/CUDA% time csc 20000
+61.110u 1.719s 1:02.86 99.9%    0+0k 0+0io 0pf+0w
+\end{Verbatim}
+
+Very impressive!  No wonder people talk of CUDA in terms like ``a
+supercomputer on our desktop.''  And remember, this includes the time to
+copy the matrix from the host to the device (and to copy the output
+array back).  And we didn't even try to optimize thread configuration,
+memory coalescing and bank usage, making good use of memory hierarchy,
+etc.\footnote{Neither has the CPU-only version of the program been
+optimized.  As pointed out by Bill Hsu, the row-major version of that
+program should run faster than the column-major one, due to cache
+consideration.}
+
+On the other hand, remember that this is an ``embarrassingly parallel''
+application, and in many applications we may have to settle for a much
+more modest increase, and work harder to get it.
+
+\section{Example:  Finding the Mean Number of Mutual Outlinks}
+
+As in Sections \ref{mutlinks} and \ref{ompmutlinks}, consider a network
+graph of some kind, such as Web links.  For any two vertices, say any
+two Web sites, we might be interested in mutual outlinks, i.e. outbound
+links that are common to two Web sites.  The CUDA code below finds the
+mean number of mutual outlinks, among all pairs of sites in a set of Web
+sites.  
+
+\begin{lstlisting}[numbers=left]
+#include <cuda.h>
+#include <stdio.h>
+
+// CUDA example:  finds mean number of mutual outlinks, among all pairs
+// of Web sites in our set; in checking all (i,j) pairs, thread k will
+// handle all i such that i mod totth = k, where totth is the number of
+// threads
+
+// procpairs() processes all pairs for a given thread
+__global__ void procpairs(int *m, int *tot, int n)
+{  int totth = gridDim.x * blockDim.x,  // total number of threads
+       me = blockIdx.x * blockDim.x + threadIdx.x;  // my thread number
+   int i,j,k,sum = 0; 
+   for (i = me; i < n; i += totth) {  // do various rows i
+      for (j = i+1; j < n; j++) {  // do all rows j > i
+         for (k = 0; k < n; k++)
+            sum += m[n*i+k] * m[n*j+k];
+      }
+   }
+   atomicAdd(tot,sum);
+}
+
+int main(int argc, char **argv)
+{  int n = atoi(argv[1]),  // number of vertices
+       nblk = atoi(argv[2]);  // number of blocks
+    int *hm, // host matrix
+        *dm, // device matrix
+        htot, // host grand total
+        *dtot; // device grand total
+    int msize = n * n * sizeof(int);  // size of matrix in bytes
+    // allocate space for host matrix
+    hm = (int *) malloc(msize);  
+    // as a test, fill matrix with random 1s and 0s
+    int i,j;
+    for (i = 0; i < n; i++) {
+       hm[n*i+i] = 0;
+       for (j = 0; j < n; j++) {
+          if (j != i) hm[i*n+j] = rand() % 2;
+       }
+    }
+    // allocate space for device matrix 
+    cudaMalloc((void **)&dm,msize);
+    // copy host matrix to device matrix
+    cudaMemcpy(dm,hm,msize,cudaMemcpyHostToDevice);
+    htot = 0;
+    // set up device total and initialize it
+    cudaMalloc((void **)&dtot,sizeof(int));
+    cudaMemcpy(dtot,&htot,sizeof(int),cudaMemcpyHostToDevice);
+    // set up parameters for threads structure
+    dim3 dimGrid(nblk,1);
+    dim3 dimBlock(192,1,1);
+    // invoke the kernel
+    procpairs<<<dimGrid,dimBlock>>>(dm,dtot,n);
+    // wait for kernel to finish
+    cudaThreadSynchronize();
+    // copy total from device to host
+    cudaMemcpy(&htot,dtot,sizeof(int),cudaMemcpyDeviceToHost);
+    // check results
+    if (n <= 15) {
+       for (i = 0; i < n; i++) {
+          for (j = 0; j < n; j++) 
+             printf("%d ",hm[n*i+j]);
+          printf("\n");
+       }
+    }
+    printf("mean = %f\n",htot/float((n*(n-1))/2));
+    // clean up
+    free(hm);
+    cudaFree(dm);
+    cudaFree(dtot);
+}
+\end{lstlisting}
+
+Again we've used the method in Section \ref{mutlinks} to partition the
+various pairs (i,j) to the different threads.  Note the use of {\bf
+atomicAdd()}.
+
+The above code is hardly optimal.  The reader is encouraged to find
+improvements.
+
+\section{Example:  Finding Prime Numbers}
+\label{primefinder}
+
+The code below finds all the prime numbers from 2 to {\bf n}.
+
+\begin{lstlisting}[numbers=left]
+#include <stdio.h>
+#include <stdlib.h>
+#include <cuda.h>
+
+// CUDA example:  illustration of shared memory allocation at run time;
+// finds primes using classical Sieve of Erathosthenes:  make list of
+// numbers 2 to n, then cross out all multiples of 2 (but not 2 itself),
+// then all multiples of 3, etc.; whatever is left over is prime; in our
+// array, 1 will mean "not crossed out" and 0 will mean "crossed out"
+
+// IMPORTANT NOTE: uses shared memory, in a single block, without
+// rotating parts of array in and out of shared memory; thus limited to
+// n <= 4000 if have 16K shared memory
+
+// initialize sprimes, 1s for the odds, 0s for the evens; see sieve()
+// for the nature of the arguments
+__device__ void initsp(int *sprimes, int n, int nth, int me) 
+{
+   int chunk,startsetsp,endsetsp,val,i;
+   sprimes[2] = 1;
+   // determine sprimes chunk for this thread to init
+   chunk = (n-1) / nth;
+   startsetsp = 2 + me*chunk;
+   if (me < nth-1) endsetsp = startsetsp + chunk - 1;
+   else endsetsp = n;
+   // now do the init
+   val = startsetsp % 2; 
+   for (i = startsetsp; i <= endsetsp; i++) {
+      sprimes[i] = val;
+      val = 1 - val;
+   }
+   // make sure sprimes up to date for all
+   __syncthreads();
+}
+
+// copy sprimes back to device global memory; see sieve() for the nature
+// of the arguments
+__device__ void cpytoglb(int *dprimes, int *sprimes, int n, int nth, int me) 
+{
+   int startcpy,endcpy,chunk,i;
+   chunk = (n-1) / nth;
+   startcpy = 2 + me*chunk;
+   if (me < nth-1) endcpy = startcpy + chunk - 1;
+   else endcpy = n;
+   for (i = startcpy; i <= endcpy; i++) dprimes[i] = sprimes[i];
+   __syncthreads();
+}
+
+// finds primes from 2 to n, storing the information in dprimes, with
+// dprimes[i] being 1 if i is prime, 0 if composite; nth is the number
+// of threads (threadDim somehow not recognized)
+__global__ void sieve(int *dprimes, int n, int nth)
+{
+   extern __shared__ int sprimes[];
+   int me = threadIdx.x;  
+   int nth1 = nth - 1;
+   // initialize sprimes array, 1s for odds, 0 for evens
+   initsp(sprimes,n,nth,me);
+   // "cross out" multiples of various numbers m, with each thread doing
+   // a chunk of m's; always check first to determine whether m has
+   // already been found to be composite; finish when m*m > n
+   int maxmult,m,startmult,endmult,chunk,i;
+   for (m = 3; m*m <= n; m++) {
+      if (sprimes[m] != 0) {
+         // find largest multiple of m that is <= n
+         maxmult = n / m;
+         // now partition 2,3,...,maxmult among the threads
+         chunk = (maxmult - 1) / nth;
+         startmult = 2 + me*chunk;
+         if (me < nth1) endmult = startmult + chunk - 1;
+         else endmult = maxmult;
+      }
+      // OK, cross out my chunk
+      for (i = startmult; i <= endmult; i++) sprimes[i*m] = 0;
+   }
+   __syncthreads();
+   // copy back to device global memory for return to host
+   cpytoglb(dprimes,sprimes,n,nth,me);
+}
+
+int main(int argc, char **argv)
+{
+    int n = atoi(argv[1]),  // will find primes among 1,...,n
+        nth = atoi(argv[2]);  // number of threads
+    int *hprimes,  // host primes list
+        *dprimes;  // device primes list
+    int psize = (n+1) * sizeof(int);  // size of primes lists in bytes
+    // allocate space for host list
+    hprimes = (int *) malloc(psize);  
+    // allocate space for device list 
+    cudaMalloc((void **)&dprimes,psize);
+    dim3 dimGrid(1,1);
+    dim3 dimBlock(nth,1,1);
+    // invoke the kernel, including a request to allocate shared memory
+    sieve<<<dimGrid,dimBlock,psize>>>(dprimes,n,nth);
+    // check whether we asked for too much shared memory
+    cudaError_t err = cudaGetLastError();
+    if(err != cudaSuccess) printf("%s\n",cudaGetErrorString(err));
+    // wait for kernel to finish
+    cudaThreadSynchronize();
+    // copy list from device to host
+    cudaMemcpy(hprimes,dprimes,psize,cudaMemcpyDeviceToHost);
+    // check results
+    if (n <= 1000) for(int i=2; i<=n; i++) 
+       if (hprimes[i] == 1) printf("%d\n",i);
+    // clean up
+    free(hprimes);
+    cudaFree(dprimes);
+}
+\end{lstlisting}
+
+This code has been designed with some thought as to memory speed and
+thread divergence.  Ideally, we would like to use device shared memory
+if possible, and to exploit the lockstep, SIMD nature of the hardware.
+
+The code uses the classical Sieve of Erathosthenes, ``crossing out''
+multiples of 2, 3, 5, 7 and so on to get rid of all the composite
+numbers.  However, the code here differs from that in Section
+\ref{sharedview}, even though both programs use the Sieve of
+Erathosthenes.  
+
+Say we have just two threads, A and B.  In the earlier version, thread A
+might cross out all multiples of 19 while B handles multiples of 23.  In
+this new version, thread A deals with only some multiples of 19 and B
+handles the others for 19.  Then they both handle their own portions of
+multiples of 23, and so on.  The thinking here is that the second
+version will be more amenable to lockstep execution, thus causing less
+thread divergence.
+
+Thus in this new version, each thread handles a chunk of multiples of
+the given prime.  Note the contrast of this with many CUDA examples, in
+which each thread does only a small amount of work, such as computing a
+single element in the product of two matrices.
+
+In order to enhance memory performance, this code uses device shared
+memory.  All the ``crossing out'' is done in the shared memory array
+{\bf sprimes}, and then when we are all done, that is copied to the
+device global memory array {\bf dprimes}, which is in turn copies to
+host memory.  By the way, note that the amount of shared memory here is
+determined dynamically.
+
+However, device shared memory consists only of 16K bytes, which would
+limit us here to values of {\bf n} up to about 4000.  Moreover, by using
+just one block, we are only using a small part of the CPU.  Extending
+the program to work for larger values of {\bf n} would require some
+careful planning if we still wish to use shared memory.  
+
+\section{Example:  Finding Cumulative Sums}
+\label{cumulsums}
+
+Here we wish to compute cumulative sums.  For instance, if the original
+array is (3,1,2,0,3,0,1,2), then it is changed to (3,4,6,6,9,9,10,12).
+
+(Note:  This is a special case of the {\it prefix scan} problem, covered
+in Chapter \ref{chapter:prefix}.)
+
+The general plan is for each thread to operate on one
+chunk of the array.  A thread will find cumulative sums for its chunk,
+and then adjust them based on the high values of the chunks that precede
+it.  In the above example, for instance, say we have 4 threads.  The
+threads will first produce (3,4), (2,2), (3,3) and (1,3).  Since thread
+0 found a cumulative sum of 4 in the end, we must add 4 to each element
+of (2,2), yielding (6,6).  Thread 1 had found a cumulative sum of 2 in
+the end, which together with the 4 found by thread 0 makes 6.  Thus
+thread 2 must add 6 to each of its elements, i.e. add 6 to (3,3),
+yielding (9,9).  The case of thread 3 is similar.
+
+Below is code for the special case of a single block:
+
+\begin{lstlisting}[numbers=left]
+// for this simple illustration, it is assumed that the code runs in
+// just one block, and that the number of threads evenly divides n
+
+// improvements that could be made:
+//    1.  change to multiple blocks, to try to use all SMs
+//    2.  possibly use shared memory
+//    3.  have each thread work on staggered elements of dx, rather than
+//        on contiguous ones, to get more efficient bank access
+
+#include <cuda.h>
+#include <stdio.h>
+
+__global__ void cumulker(int *dx, int n)
+{  
+   int me = threadIdx.x;
+   int csize  = n / blockDim.x;
+   int start = me * csize;
+   int i,j,base;
+   for (i = 1; i < csize; i++) {
+      j = start + i;
+      dx[j] = dx[j-1] + dx[j];
+   }
+   __syncthreads();
+   if (me > 0) {
+      base = 0;
+      for (j = 0; j < me; j++)
+         base += dx[(j+1)*csize-1];
+   }
+   __syncthreads();
+   if (me > 0) {
+      for (i = start; i < start + csize; i++)
+         dx[i] += base;
+   }
+}
+\end{lstlisting}
+
+\section{When Is it Advantageous to Use Shared Memory}
+
+Shared memory only helps if we are doing multiple accesses to the data.
+If for instance our code does a single read and a single write to an
+element of an array, then transferring it back and forth between global
+and shared memory isn't worthwhile.
+
+Would the cumulative-sums program in Section \ref{cumulsums} benefit
+from the use of shared memory?  (Put aside the fact that the code runs
+in just one block, making use of just a sliver of the machine.)  The
+answer appears to be that a modest imrprovement might be obtained.  Each
+thread (except the first) reads many elements of {\bf dx} twice, some of
+them three times.  There are also writes.
+
+The case of the prime-finder program in Section \ref{primefinder} is
+less clear, and probably quite dependent on whether we are using the
+more advanced GPUs, which feature at least some L1 cache space.
+
+\section{Example:  Transforming an Adjacency Matrix}
+\label{transgraph1}
+
+Here is a CUDA version of the code in Section \ref{transgraph}.
+
+\begin{lstlisting}[numbers=left]
+// CUDA example
+
+// takes a graph adjacency matrix for a directed graph, and converts it
+// to a 2-column matrix of pairs (i,j), meaning an edge from vertex i to
+// vertex j; the output matrix must be in lexicographical order
+
+// not claimed efficient, either in speed or in memory usage
+
+#include <cuda.h>
+#include <stdio.h>
+
+// needs -lrt link flag for C++
+#include <time.h>
+float timediff(struct timespec t1, struct timespec t2)
+{  if (t1.tv_nsec > t2.tv_nsec) {
+         t2.tv_sec -= 1;
+         t2.tv_nsec += 1000000000;
+   }
+   return t2.tv_sec-t1.tv_sec + 0.000000001 * (t2.tv_nsec-t1.tv_nsec);
+}
+
+
+// kernel transgraph() does this work
+// arguments:
+//    adjm:  the adjacency matrix (NOT assumed symmetric), 1 for edge, 0
+//           otherwise; note: matrix is overwritten by the function
+//    n:  number of rows and columns of adjm
+//    adjmout:  output matrix
+//    nout:  number of rows in adjmout
+
+__global__ void tgkernel1(int *dadjm, int n, int *dcounts)
+{  int tot1s,j;
+   int me = blockDim.x * blockIdx.x + threadIdx.x;
+   tot1s = 0;
+   for (j = 0; j < n; j++) {
+      if (dadjm[n*me+j] == 1) {
+         dadjm[n*me+tot1s++] = j;
+      }
+   dcounts[me] = tot1s;
+   }
+}
+
+__global__ void tgkernel2(int *dadjm, int n, 
+   int *dcounts, int *dstarts, int *doutm)
+{  int outrow,num1si,j;
+   // int me = threadIdx.x;
+   int me = blockDim.x * blockIdx.x + threadIdx.x;
+   // fill in this thread's portion of doutm
+   outrow = dstarts[me];
+   num1si = dcounts[me];
+   if (num1si > 0) {
+      for (j = 0; j < num1si; j++) {
+         doutm[2*outrow+2*j] = me;
+         doutm[2*outrow+2*j+1] = dadjm[n*me+j];
+     }
+   }
+}
+
+// replaces counts by cumulative counts
+void cumulcounts(int *c, int *s, int n)
+{  int i;
+   s[0] = 0;
+   for (i = 1; i < n; i++) {
+      s[i] = s[i-1] + c[i-1];
+   }
+}
+
+int *transgraph(int *hadjm, int n, int *nout, int gsize, int bsize)
+{  int *dadjm;  // device adjacency matrix
+   int *houtm;  // host output matrix
+   int *doutm;  // device output matrix
+   int *hcounts;  // host counts vector
+   int *dcounts;  // device counts vector
+   int *hstarts;  // host starts vector
+   int *dstarts;  // device starts vector
+   hcounts = (int *) malloc(n*sizeof(int));
+   hstarts = (int *) malloc(n*sizeof(int));
+   cudaMalloc((void **)&dadjm,n*n*sizeof(int));
+   cudaMalloc((void **)&dcounts,n*sizeof(int));
+   cudaMalloc((void **)&dstarts,n*sizeof(int));
+   houtm = (int *) malloc(n*n*sizeof(int));
+   cudaMalloc((void **)&doutm,n*n*sizeof(int));
+   cudaMemcpy(dadjm,hadjm,n*n*sizeof(int),cudaMemcpyHostToDevice);
+   dim3 dimGrid(gsize,1);
+   dim3 dimBlock(bsize,1,1);
+   // calculate counts and starts first
+   tgkernel1<<<dimGrid,dimBlock>>>(dadjm,n,dcounts);
+   // cudaMemcpy(hadjm,dadjm,n*n*sizeof(int),cudaMemcpyDeviceToHost);
+   cudaMemcpy(hcounts,dcounts,n*sizeof(int),cudaMemcpyDeviceToHost);
+   cumulcounts(hcounts,hstarts,n);
+   *nout = hstarts[n-1] + hcounts[n-1];
+   cudaMemcpy(dstarts,hstarts,n*sizeof(int),cudaMemcpyHostToDevice);
+   tgkernel2<<<dimGrid,dimBlock>>>(dadjm,n,dcounts,dstarts,doutm);
+   cudaMemcpy(houtm,doutm,2*(*nout)*sizeof(int),cudaMemcpyDeviceToHost);
+   free(hcounts);
+   free(hstarts);
+   cudaFree(dadjm);
+   cudaFree(dcounts);
+   cudaFree(dstarts);
+   return houtm;
+}
+
+int main(int argc, char **argv)
+{  int i,j;
+   int *adjm;  // host adjacency matrix 
+   int *outm;  // host output matrix
+   int n = atoi(argv[1]);
+   int gsize = atoi(argv[2]);
+   int bsize = atoi(argv[3]);
+   int nout;
+   adjm = (int *) malloc(n*n*sizeof(int));
+   for (i = 0; i < n; i++)
+      for (j = 0; j < n; j++)
+         if (i == j) adjm[n*i+j] = 0;
+         else adjm[n*i+j] = rand() % 2;
+   if (n < 10) {
+      printf("adjacency matrix: \n");
+      for (i = 0; i < n; i++) {
+         for (j = 0; j < n; j++) printf("%d ",adjm[n*i+j]);
+         printf("\n");
+      }
+   }
+   
+   struct timespec bgn,nd;
+   clock_gettime(CLOCK_REALTIME, &bgn);
+
+   outm = transgraph(adjm,n,&nout,gsize,bsize);
+   printf("num rows in out matrix = %d\n",nout);
+   if (nout < 50) {
+      printf("out matrix: \n");
+      for (i = 0; i < nout; i++) 
+         printf("%d %d\n",outm[2*i],outm[2*i+1]);
+   }
+
+   clock_gettime(CLOCK_REALTIME, &nd);
+   printf("%f\n",timediff(bgn,nd));
+}
+
+\end{lstlisting}
+
+\section{Error Checking}
+
+Every CUDA call (except for kernel invocations) returns an error code of
+type {\bf cudaError\_t}.  One can view the nature of the error by
+calling {\bf cudaGetErrorString()} and printing its output. 
+
+For kernel invocations, one can call {\bf cudaGetLastError()}, which
+does what its name implies.  A call would typically have the form
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+cudaError_t err = cudaGetLastError();
+if(err != cudaSuccess) printf("%s\n",cudaGetErrorString(err));
+\end{Verbatim}
+
+You may also wish to {\bf cutilSafeCall()}, which is used by wrapping your 
+regular CUDA call.  It automatically prints out error messages as above.
+
+Each CUBLAS call returns a potential error code, of type {\bf
+cublasStatus}, not checked here.
+
+\section{Loop Unrolling}
+
+{\bf Loop unrolling} is an old technique used on uniprocessor machines
+to achieve speedup due to branch elimination and the like.  Branches
+make it difficult to do instruction or data prefetching, so eliminating
+them may speed things up.
+
+The CUDA compiler provides the programmer with the {\bf unroll} pragma
+to request loop unrolling.  Here an n-iteration {\bf for} loop is
+changed to k copies of the body of the loop, each working on about n/k
+iterations.  If n and k are known constant, GPU registers can be used to
+implement the unrolled loop.
+
+For example, the loop
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+for (i = 0; i < 2; i++ {
+   sum += x[i];
+   sum2 += x[i]*x[i];
+}
+\end{Verbatim}
+
+could be unrolled to
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+sum += x[1];
+sum2 += x[1]*x[1];
+sum += x[2];
+sum2 += x[2]*x[2];
+\end{Verbatim}
+
+Here n = k = 2.  If {\bf x} is local to this function, then unrolling
+will allow the compiler to store it in a register, which could be a
+great performance enhancer.
+
+The compiler will try to do loop unrolling even if the programmer
+doesn't request it, but the programmer can try to control things by
+using the pragma:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+#pragma unroll k
+\end{Verbatim}
+
+suggest to the compiler a k-fold unrolling.  Setting k = 1 will instruct
+the compiler {\it not} to unroll.
+
+\section{Short Vectors}
+
+In CUDA, there are types such as {\bf int4}, {\bf char2} and so on, up
+to four elements each.  So, an {\bf uint4} type is a set of four unsigned
+{\bf int}s.  These are called {\bf short vectors}.
+
+The key point is that a short vector can be treated as a single word in
+terms of memory access and GPU instructions.  It may be possible to
+reduce time by a factor of 4 by dividing arrays into chunks of four
+contiguous words and making short vectors from them.
+
+\section{The New Generation}
+
+The latest GPU architecture from NVIDIA is called Kepler.  Many of the
+advances are of the ``bigger and faster than before'' type.  These are
+important, but be sure to note the significant architectural changes,
+including:
+
+\begin{itemize}
+
+\item Host memory, device global memory and device shared memory share a
+unifed address space.
+
+\item On-chip memory can be apportioned to both shared memory and cache
+memory.  Since shared memory is in essence a programmer-managed cache,
+this gives the programmer access to a real cache, a great convenience to
+the programmer though with a possible sacrifice in speed.  Note by the
+way that this cache is aimed at spatial locality, not temporal
+locality.
+
+\end{itemize}
+
+\section{CUDA from a Higher Level}
+
+CUDA programming can involve a lot of work, and one is never sure that
+one's code is fully efficient.  Fortunately, a number of libraries of
+tight code have been developed for operations that arise often in
+parallel programming.  
+
+You are of course using CUDA code at the bottom, but without explicit
+kernel calls.  And again, remember, the contents of device global memory
+are persistent across kernel calls in the same application.  Therefore
+you can mix explicit CUDA code and calls to these libraries.  Your
+program might have multiple kernel invocations, some CUDA and others to
+the libraries, with each using data in device global memory that was
+written by earlier kernels.  In some cases, you may need to do a
+conversion to get the proper type.
+
+These packages can be deceptively simple.  {\bf Remember, each call to a
+function in these packages involves a CUDA kernel call---with the
+associated overhead.}
+
+Programming in these libraries is typically much more convenient than in
+direct CUDA.  Note, though, that even though these libraries have been
+highly optimized for what they are intended to do, they will not
+generally give you the fastest possible code for any given CUDA
+application.  
+
+We'll discuss a few such libraries in this section.
+
+\subsection{CUBLAS}
+\label{cublas}
+
+CUDA includes some parallel linear algebra routines callable from
+straight C code.  In other words, you can get the benefit of GPU in
+linear algebra contexts without directly programming in CUDA.
+
+\subsubsection{Example:  Row Sums Once Again}
+
+Below is an example {\bf RowSumsCB.c}, the matrix row sums example
+again, this time using CUBLAS.  We can find the vector of row sums of
+the matrix A by post-multiplying A by a column vector of all 1s.
+
+I compiled the code by typing
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+gcc -g -I/usr/local/cuda/include -L/usr/local/cuda/lib RowSumsCB.c -lcublas -lcudart
+\end{Verbatim}
+
+You should modify for your own CUDA locations accordingly.  Users who
+merely wish to use CUBLAS will find the above more convenient, but if
+you are mixing CUDA and CUBLAS, you would use {\bf nvcc}:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+nvcc -g -G RowSumsCB.c -lcublas 
+\end{Verbatim}
+
+Here is the code:
+
+\begin{lstlisting}[numbers=left]
+#include <stdio.h>
+#include <cublas.h>  // required include
+
+int main(int argc, char **argv)
+{
+   int n = atoi(argv[1]);  // number of matrix rows/cols
+   float *hm, // host matrix
+         *hrs, // host rowsums vector
+         *ones,  // 1s vector for multiply
+         *dm, // device matrix
+         *drs; // device rowsums vector
+   // allocate space on host 
+   hm = (float *) malloc(n*n*sizeof(float));
+   hrs = (float *) malloc(n*sizeof(float));
+   ones = (float *) malloc(n*sizeof(float));
+   // as a test, fill hm with consecutive integers, but in column-major
+   // order for CUBLAS; also put 1s in ones
+   int i,j;
+   float t = 0.0;
+   for (i = 0; i < n; i++) {
+      ones[i] = 1.0;
+      for (j = 0; j < n; j++) 
+         hm[j*n+i] = t++;
+   }
+   cublasInit();  // required init
+   // set up space on the device
+   cublasAlloc(n*n,sizeof(float),(void**)&dm);
+   cublasAlloc(n,sizeof(float),(void**)&drs);
+   // copy data from host to device
+   cublasSetMatrix(n,n,sizeof(float),hm,n,dm,n);
+   cublasSetVector(n,sizeof(float),ones,1,drs,1);
+   // matrix times vector ("mv")
+   cublasSgemv('n',n,n,1.0,dm,n,drs,1,0.0,drs,1);
+   // copy result back to host
+   cublasGetVector(n,sizeof(float),drs,1,hrs,1);
+   // check results
+   if (n < 20) for (i = 0; i < n; i++) printf("%f\n",hrs[i]);
+   // clean up on device (should call free() on host too)
+   cublasFree(dm);
+   cublasFree(drs);
+   cublasShutdown();
+}
+\end{lstlisting}
+
+As noted in the comments, CUBLAS assumes FORTRAN-style, i.e.
+column-major order, for matrices.
+
+Now that you know the basic format of CUDA calls, the CUBLAS versions
+will look similar.  In the call
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+cublasAlloc(n*n,sizeof(float),(void**)&dm);
+\end{Verbatim}
+
+for instance, we are allocating space on the device for an n x n
+matrix of {\bf float}s.
+
+The call 
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+cublasSetMatrix(n,n,sizeof(float),hm,n,dm,n);
+\end{Verbatim}
+
+is slightly more complicated.  Here we are saying that we are copying
+{\bf hm}, an n x n matrix of {\bf float}s on the host, to {\bf dm} on
+the host.  The {\bf n} arguments in the last and third-to-last positions
+again say that the two matrices each have {\bf n} dimensioned rows.
+This seems redundant, but this is needed in cases of matrix tiling,
+where the number of rows of a tile would be less than the number of rows
+of the matrix as a whole.
+
+The 1s in the call 
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+cublasSetVector(n,sizeof(float),ones,1,drs,1);
+\end{Verbatim} 
+
+are needed for similar reasons.  We are saying that in our source vector
+{\bf ones}, for example, the elements of interest are spaced 1 elements
+apart, i.e. they are contiguous.  But if we wanted our vector to be some
+row in a matrix with, say, 500 rows, the elements of any particular row
+of interest  would be spaced 500 elements apart, again keeping in mind
+that column-major order is assumed.
+
+The actual matrix multiplication is done here:
+
+\begin{Verbatim}[fontsize=\relsize{-2}]
+cublasSgemv('n',n,n,1.0,dm,n,drs,1,0.0,drs,1);
+\end{Verbatim}
+
+The ``mv'' in ``cublasSgemv'' stands for ``matrix times vector.''  Here
+the call says:  no (`n'), we do not want the matrix to be transposed;
+the matrix has {\bf n} rows and {\bf n} columns; we wish the matrix to
+be multiplied by 1.0 (if 0, the multiplication is not actually
+performed, which we could have here); the matrix is at {\bf dm}; the
+number of dimensioned rows of the matrix is {\bf n}; the vector is at
+{\bf drs}; the elements of the vector are spaced 1 word apart; we wish
+the vector to not be multiplied by a scalar (see note above); the
+resulting vector will be stored at {\bf drs}, 1 word apart.
+
+Further information is available in the CUBLAS manual. 
+
+\subsection{Thrust}
+
+The Thrust library is usable not only with CUDA but also to general
+OpenMP code!  So I've put my coverage of Thrust in a separate chapter,
+Chapter \ref{chap:thrust}.
+
+\subsection{CUDPP}
+
+CUDPP is similar to Thrust (though CUDPP was developed earlier) in terms
+of operations offered.  It is perhaps less flexible than Thrust, but is
+easier to learn and is said to be faster.
+
+(No examples yet, as the author did not have access to a CUDPP system
+yet.)
+
+\subsection{CUFFT}
+
+CUFFT does for the Fast Fourier Transform what CUBLAS does for linear
+algebra, i.e. it provides CUDA-optimized FFT routines.
+
+\section{Other CUDA Examples in This Book}
+
+There are additional CUDA examples in later sections of this book.
+These include:\footnote{If you are reading this presentation on CUDA
+separately from the book, the book is at
+\url{http://heather.cs.ucdavis.edu/~matloff/158/PLN/ParProcBook.pdf}
+}
+
+\begin{itemize}
+
+\item Prof. Richard Edgar's matrix-multiply code, optimized for use of
+shared memory, Section \ref{cudamatmult}.
+
+\item Odd/even transposition sort, Section \ref{cudaoddeven}, showing a
+typical CUDA pattern for iterative algorithms.
+
+\item Gaussian elimination for linear systems, Section \ref{gauss}.
+
+\end{itemize}
+
