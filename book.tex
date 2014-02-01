@@ -1,5 +1,5 @@
 \documentclass[twoside,nofonts,fancyhdr, 12.5pt]{ctexbook}
-
+\usepackage{indentfirst}
 \usepackage{amsmath}
 \newtheorem{theorem}{Theorem}
 \newcommand{\BlackBox}{\rule{1.5ex}{1.5ex}}  % end of proof
@@ -20,8 +20,6 @@
 \usepackage{xeCJK}
 \usepackage{relsize}
 \usepackage[a4paper,marginparsep=6mm,marginparwidth=6mm,footskip=3.5pc,centering]{geometry}
-
-
 \usepackage{subfigure}
 \usepackage{tabularx}
 \usepackage[toc,page]{appendix}
@@ -36,7 +34,7 @@
 \setlength{\headsep}{0in}
 \setlength{\textwidth}{6.5in}
 \setlength{\textheight}{8.0in}
-\setlength{\parindent}{0in}
+\setlength\parindent{2em}
 \setlength{\parskip}{0.1in}
 
 \usepackage{hyperref}
@@ -72,13 +70,6 @@
 \thispagestyle{empty}%
 \hbox{}\newpage\if@twocolumn\hbox{}\newpage\fi\fi\fi}
 
-%\titleformat{\chapter}[display]{\normalfont\huge\bfseries\center}{\chaptertitlename\ \thechapter}{10pt}{\Huge}
-%\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
-%\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
-%\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{1em}{}
-%\titleformat{\paragraph}[runin]{\normalfont\normalsize\bfseries}{\theparagraph}{1em}{}
-%\titleformat{\subparagraph}[runin]{\normalfont\normalsize\bfseries}{\thesubparagraph}{1em}{}
-%下面的命令用于调节 标题与上下文，段落之间间距命令
 \titlespacing*{\chapter} {0pt}{50pt}{40pt}
 \titlespacing*{\section} {0pt}{3.5ex plus 1ex minus .2ex}{2.3ex plus .2ex}
 \titlespacing*{\subsection} {0pt}{3.25ex plus 1ex minus .2ex}{1.5ex plus .2ex}
@@ -192,27 +183,18 @@
 \setCJKfamilyfont{fs}{方正仿宋_GBK}
 %%
 \newcommand{\clearemptydoublepage}{\newpage{\pagestyle{empty}\cleardoublepage}}
-
 \begin{document}
 \thispagestyle{empty}
 \include{./chapter/cover}
 \pagecolor{white}
-
 \include{./preface/AboutBook}
-
 \include{./preface/AuthorBio}
-
-
 \cleardoublepage
 \pagenumbering{roman}
 \tableofcontents
-
-% \setlength{\parskip}{1.05ex}
-% \setlength{\baselineskip}{1.5em}
-\newcommand{\dahao}{\fontsize{50pt}{\baselineskip}\selectfont}
-
 \cleardoublepage
 \pagenumbering{arabic}
+
 \include{./chapter/Intro}
 \include{./chapter/PerfIssues}
 \include{./chapter/SharedMem}

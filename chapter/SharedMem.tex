@@ -1,5 +1,5 @@
-\chapter{Shared Memory Parallelism} 
-\label{chap:shared} 
+\chapter{Shared Memory Parallelism}
+\label{chap:shared}
 
 Shared-memory programming is considered by many in the parallel
 processing community as being the clearest of the various parallel
@@ -75,7 +75,7 @@ can be done simultaneously.
 In this section, assume for simplicity that our machine has 32-bit
 words.  This is still true for many GPUs, in spite of the widespread use
 of 64-bit general-purpose machines today, and in any case, the numbers
-here can easily be converted to the 64-bit case.  
+here can easily be converted to the 64-bit case.
 
 Note that this means that consecutive words differ in address by 4.
 Let's thus define the word-address of a word to be its ordinary address
@@ -139,7 +139,7 @@ part---but if we are careful we can get good results.
 
 Consider an array {\bf x} of 16 million elements, whose sum we wish to
 compute, say using 16 threads.  Suppose we have four memory banks, with
-low-order interleaving. 
+low-order interleaving.
 
 A naive implementation of the summing code might be
 
@@ -258,7 +258,7 @@ struct {
    char *name[]100;
    float salary[100];
    float yrs[100];
-} 
+}
 \end{lstlisting}
 
 \subsection{Example:  Code to Implement Padding}
@@ -306,7 +306,7 @@ float getter(float *q, int m, int n, int s,
 
 A Symmetric Multiprocessor (SMP) system has the following structure:
 
-\includegraphics{Images/UMABus.jpg} 
+\includegraphics{Images/UMABus.jpg}
 
 Here and below:
 
@@ -316,12 +316,12 @@ Here and below:
 
 \item The Ms are \textbf{memory modules}. These are physically separate
 objects, e.g. separate boards of memory chips.  It is typical that there
-will be the same number of Ms as Ps. 
+will be the same number of Ms as Ps.
 
 \item To make sure only one P uses the bus at a time, standard bus
-arbitration signals and/or arbitration devices are used. 
+arbitration signals and/or arbitration devices are used.
 
-\item There may also be \textbf{coherent caches}, which we will discuss later. 
+\item There may also be \textbf{coherent caches}, which we will discuss later.
 
 \end{itemize}
 
@@ -333,7 +333,7 @@ pairs are connected by some kind of network.
 
 Here is a simple version:
 
-\includegraphics{Images/NUMABus.jpg} 
+\includegraphics{Images/NUMABus.jpg}
 
 Each P/M/R set here is called a \textbf{processing element} (PE). Note
 that each PE has its own local bus, and is also connected to the global
@@ -359,7 +359,7 @@ will have to wait a long time to get what it wants from M8.
 Today almost all high-end MIMD systems are NUMAs.  One of the attractive
 features of NUMA is that by good programming we can exploit the
 nonuniformity.  In matrix problems, for example, we can write our
-program so that, for example, P8 usually works on those rows of the 
+program so that, for example, P8 usually works on those rows of the
 matrix which are stored in M8, P3 usually works on those rows of the
 matrix which are stored in M3, etc. In order to do this, we need to make
 use of the C language's \& address operator, and have some knowledge of
@@ -373,7 +373,7 @@ at the same time.  If one has more than, say, two dozen processors are
 on the bus, the bus becomes saturated, even if traffic-reducing methods
 such as adding caches are used. Thus multipathway topologies are used
 for all but the smallest systems.  In this section we look at two
-alternatives to a bus topology. 
+alternatives to a bus topology.
 
 \subsubsection{Crossbar Interconnects}
 
@@ -381,7 +381,7 @@ Consider a shared-memory system with n processors and n memory modules.
 Then a crossbar connection would provide \( n^{2} \) pathways. E.g. for n =
 8:
 
-\includegraphics{Images/XBar.jpg} 
+\includegraphics{Images/XBar.jpg}
 
 Generally serial communication is used from node to node, with a packet
 containing information on both source and destination address. E.g. if
@@ -423,7 +423,7 @@ paths. Here is an example of a NUMA 8x8 system:
 \par
 
 \centerline{
-\includegraphics[height=1.0in]{Images/Omega.jpg} 
+\includegraphics[height=1.0in]{Images/Omega.jpg}
 }
 
 Recall that each PE is a processor/memory pair.  PE3, for instance,
@@ -486,22 +486,22 @@ we are interested in how fast the latency, bandwidth and cost grow with
 n:
 
 \begin{tabular}{|l|r|r|r|}
-\hline 
+\hline
 criterion &
  bus &
  Omega&
  crossbar \\
-\hline 
+\hline
 latency &
  O(1) &
  $\rm O( \log_2 n)$ &
  O(n) \\
-\hline 
+\hline
 bandwidth &
  O(1) &
  O(n) &
  O(n) \\
-\hline 
+\hline
 cost &
  O(1) &
  $\rm O(n \log_2 n)$ &
@@ -587,33 +587,33 @@ modules, this wouldn't achieve parallelism.  The bus does need extra
 lines to identify which processor made the request.
 
 % \subsubsection{Dealing with Latency Problems}
-% 
+%
 % The hardware and software may also be designed to reduce latency. One
 % approach to this is \textbf{latency hiding}, which consists of
 % prefetching a word or words from a certain section of memory which is to
 % be used soon. It is somewhat similar to the idea of delayed branch in
 % RISC processors. Suppose for instance we have code like
-% 
+%
 % \begin{verbatim}
 % LD R4,200
 % ADD R5,R2
 % ADD R5,R3
 % SUB R4,R5
 % \end{verbatim}
-% 
+%
 % (where the Ri are registers).  The hardware design may be such that
 % there is a PF (prefetch) instruction, which is \textbf{nonblocking},
 % meaning that subsequent instructions can execute while the PF is still
 % pending (as long as the subsequent instructions do not depend on the
 % result of the PF). Then we could rewrite the above code as
-% 
+%
 % \begin{verbatim}
 % PF R4,200
 % ADD R5,R2
 % ADD R1,R2
 % SUB R4,R5
 % \end{verbatim}
-% 
+%
 % Hopefully the PF will be done by the time we get to the SUB instruction.
 % If not, SUB will block for the remaining time, but even then we will
 % have saved time.
@@ -643,7 +643,7 @@ following:
 
 \begin{Verbatim}[fontsize=\relsize{-2}]
    copy L to R
-   if R is 0 then write 1 to L 
+   if R is 0 then write 1 to L
 \end{Verbatim}
 
 And most importantly, these operations are done in an \textbf{atomic}
@@ -761,12 +761,10 @@ to the queue, the new value won't be visible to other processors for
 some time.  But the point is that if the second processor does not see
 work in the queue (even though the first processor has put it there),
 the program will still work correctly, albeit with some performance
-loss. 
+loss.
 
-\subsection{Fetch-and-Add Instructions} 
+\subsection{Fetch-and-Add Instructions}
 \label{fanda}
-
-\setlength{\parindent}{0in}
 
 Another form of interprocessor synchronization is a
 \textbf{fetch-and-add} (FA) instruction.  The idea of FA is as follows.
@@ -827,7 +825,7 @@ contending for a lock variable spins in the loop shown above, it is
 adding tremendously to bus traffic.
 
 An answer is to have caches at each processor.\footnote{The reader may
-wish to review the basics of caches.  See for example 
+wish to review the basics of caches.  See for example
 \url{http://heather.cs.ucdavis.edu/~matloff/50/PLN/CompOrganization.pdf}.}
 These will store copies of the values of lock variables.  (Of course,
 non-lock variables are stored too.  However, the discussion here will
@@ -867,11 +865,11 @@ memory block}.  Memory is divided in blocks, some of which have copies
 in the cache.  The cells in the cache are called {\it cache lines}.  So,
 at any given time, a given cache line is either empty or contains a copy
 (valid or not) of some memory block.} Those caches will be updated only
-later, the next time their processors need to access this cache line.  
+later, the next time their processors need to access this cache line.
 
 \item For an update protocol, the processor which writes to the variable
 tells all other caches to immediately update their cache lines
-containing copies of that variable with the new value. 
+containing copies of that variable with the new value.
 
 \end{itemize}
 
@@ -971,7 +969,7 @@ resides.  A table at P14 will inform P0 that P2 is the current owner of
 that block. P0 will then send a message to P2 to add C0 to the list of
 caches having valid copies of that block.  Similarly, a cache might
 ``resign'' from the club, due to that cache line being replaced, e.g. in
-a LRU setting, when some other cache miss occurs. 
+a LRU setting, when some other cache miss occurs.
 
 \subsection{Example: the MESI Cache Coherency Protocol}
 
@@ -981,7 +979,7 @@ systems which is widely used is MESI, which for example is the protocol
 used in the Pentium series.
 
 MESI is an invalidate protocol for bus-based systems.  Its name stands
-for the four states a given cache line can be in for a given CPU: 
+for the four states a given cache line can be in for a given CPU:
 
 \begin{itemize}
 
@@ -1000,22 +998,22 @@ Here is a summary of the meanings of the states:
 
 
 \begin{tabular}{|c|c|}
-\hline 
+\hline
 state&
  meaning\\
-\hline 
+\hline
 M&
  written to more than once; no other copy valid\\
-\hline 
+\hline
 E&
  valid; no other cache copy valid; memory copy valid\\
-\hline 
+\hline
 S&
  valid; at least one other cache copy valid\\
-\hline 
+\hline
 I&
  invalid (block either not in the cache or present but incorrect) \\
-\hline 
+\hline
 \end{tabular}
 
 \par{} \vspace{0.3cm}
@@ -1037,34 +1035,34 @@ cases to memory).
 
 So, here are various events and their corresponding state changes:
 
-{\bf If our CPU does a read:} 
+{\bf If our CPU does a read:}
 
 \begin{tabular}{|c|c|c|}
-\hline 
+\hline
 present state&
  event&
  new state\\
-\hline 
+\hline
 M&
  read hit&
  M\\
-\hline 
+\hline
 E&
  read hit&
  E\\
-\hline 
+\hline
 S&
  read hit&
  S\\
-\hline 
+\hline
 I&
  read miss; no valid cache copy at any other CPU &
  E\\
-\hline 
+\hline
 I&
  read miss; at least one valid cache copy in some other CPU &
  S  \\
-\hline 
+\hline
 \end{tabular}
 
 \par{} \vspace{0.3cm}
@@ -1072,27 +1070,27 @@ I&
 {\bf If our CPU does a memory write:}
 
 \begin{tabular}{|c|c|c|}
-\hline 
+\hline
 present state&
  event&
  new state\\
-\hline 
+\hline
 M&
  write hit; do not put invalidate signal on bus; do not update memory&
  M\\
-\hline 
+\hline
 E&
  same as M above&
  M\\
-\hline 
+\hline
 S&
  write hit; put invalidate signal on bus; update memory&
  E\\
-\hline 
+\hline
 I&
  write miss; update memory but do nothing else&
  I  \\
-\hline 
+\hline
 \end{tabular}
 
 \par{} \vspace{0.3cm}
@@ -1100,44 +1098,44 @@ I&
 {\bf If our CPU does a read or write snoop:}
 
 \begin{tabular}{|c|c|c|}
-\hline 
+\hline
 present state&
  event&
  newstate\\
-\hline 
+\hline
 M&
  read snoop; write line back to memory, picked up by other CPU&
  S\\
-\hline 
+\hline
 M&
  write snoop; write line back to memory, signal other CPU now OK to do its
  write&
  I\\
-\hline 
+\hline
 E&
  read snoop; put shared signal on bus; no memory action&
  S\\
-\hline 
+\hline
 E&
  write snoop; no memory action&
  I\\
-\hline 
+\hline
 S&
  read snoop&
  S\\
-\hline 
+\hline
 S&
  write snoop&
  I\\
-\hline 
+\hline
 I&
  any snoop&
  I \\
-\hline 
+\hline
 \end{tabular}
 
 Note that a write miss does NOT result in the associated block being
-brought in from memory.  
+brought in from memory.
 
 Example:  Suppose a given memory block has state M at processor A but
 has state I at processor B, and B attempts to write to the block.  B
@@ -1175,7 +1173,7 @@ variable {\bf W} is now written to, then {\bf Z} will suffer unfairly,
 as its copy in the cache will be considered invalid even though it is
 perfectly valid.  This can lead to a ``ping-pong'' effect, in which
 alternate writing to two variables leads to a cyclic pattern of
-coherency transactions. 
+coherency transactions.
 
 One possible solution is to add padding, e.g. declaring {\bf W} and {\bf
 Z} like this:
@@ -1201,7 +1199,7 @@ to simply be a synonym for {\it coherency} from the last section, and
 though there actually is some relation, the issues here are quite
 different.  In this case, it is a timing issue:  After one processor
 changes the value of a shared variable, when will that value be
-visible to the other processors? 
+visible to the other processors?
 
 There are various reasons why this is an issue.  For example, many
 processors, especially in multiprocessor systems, have {\bf write
@@ -1246,7 +1244,7 @@ you are saying, "I'm done writing for the moment, and wish to allow
 other processors to see what I've written."  An ACQUIRE waits for all
 pending RELEASEs to complete before it executes.\footnote{There are many
 variants of all of this, especially in the software distibuted shared
-memory realm, to be discussed later.}  
+memory realm, to be discussed later.}
 
 A related model is {\bf scope consistency}.  Say a variable, say {\bf
 Sum}, is written to within a critical section guarded by LOCK and UNLOCK
@@ -1308,7 +1306,7 @@ Note once again the performance issues.  Instructions such as ACQUIRE or
 MEMBAR will use a substantial amount of interprocessor communication
 bandwidth.  A consistency model must be chosen carefully by the system
 designer, and the programmer must keep the communication costs in mind
-in developing the software.  
+in developing the software.
 
 The recent Pentium models use Sequential Consistency, with any write
 done by a processor being immediately sent to its cache as well.
@@ -1401,7 +1399,7 @@ chip and the OS.  OpenMP 3.1 has some facility for this.
 \section{Illusion of Shared-Memory through Software}
 \label{sdsm}
 
-\subsubsection{Software Distributed Shared Memory}  
+\subsubsection{Software Distributed Shared Memory}
 
 There are also various shared-memory software packages that run on
 message-passing hardware such as NOWs, called \textbf{software
@@ -1412,7 +1410,7 @@ since the shared-memory paradigm is believed to be the easier one to
 program in.  Thus SDSM allows us to have ``the best of both
 worlds''---the convenience of the shared-memory world view with the
 inexpensive cost of some of the message-passing hardware systems,
-particularly networks of workstations (NOWs). 
+particularly networks of workstations (NOWs).
 
 SDSM itself is divided into two main approaches, the {\bf page-based}
 and {\bf object-based} varieties.  The page-based approach is generally
@@ -1422,7 +1420,7 @@ object-based type.\footnote{The term {\it object-based} is not related
 to the term {\it object-oriented programming}.}  We will discuss only
 the page-based approach here.  The most popular SDSM system today is the
 page-based Treadmarks (Rice University).  Another excellent page-based
-system is JIAJIA (Academy of Sciences, China).  
+system is JIAJIA (Academy of Sciences, China).
 
 To illustrate how page-based SDSMs work, consider the line of JIAJIA code
 
@@ -1453,7 +1451,7 @@ to the programmer) to the other JIAJIA nodes.\footnote{There are a
 number of important issues involved with this word {\it eventually}, as
 we will see later.} This transaction will then update the copies of {\bf
 Prime} at the other nodes.\footnote{The update may not occur
-immediately.  More on this later.} 
+immediately.  More on this later.}
 
 How is all of this accomplished?  It turns out that it relies on a
 clever usage of the nodes' virtual memory (VM) systems.  To understand
@@ -1468,7 +1466,7 @@ page {\it is} resident).  Basically, anytime the SDSM knows that a
 node's local copy of a variable is invalid, it will mark the page
 containing that variable as nonresident.  Then, the next time the
 program at this node tries to access that variable, a page fault will
-occur. 
+occur.
 
 As mentioned in the review above, normally a page fault causes a jump to
 the OS.  However, technically any page fault in Unix is handled as a
@@ -1479,7 +1477,7 @@ or any other page-based SDSM---writes his/her own page fault handler,
 which will do the necessary network transactions to obtain the latest
 valid value for {\bf X}.
 
-Note that although SDSMs are able to create an illusion of almost all 
+Note that although SDSMs are able to create an illusion of almost all
 aspects of shared memory, it really is not possible to create the
 illusion of shared pointer variables.  For example on shared memory
 hardware we might have a variable like {\bf P}:
@@ -1495,7 +1493,7 @@ P = &Y;
 There is no simple way to have a variable like {\bf P} in an SDSM.
 This is because a pointer is an address, and each node in an SDSM
 has its own memory separate address space.  The problem is that even
-though the underlying SDSM system will keep the various copies of {\bf Y} 
+though the underlying SDSM system will keep the various copies of {\bf Y}
 at the different nodes consistent with each other, {\bf Y} will be at a
 potentially different address on each node.
 
@@ -1523,7 +1521,7 @@ which is faster than TCP. but still part of the slow TCP/IP protocol
 suite.  TCP/IP was simply not designed for this kind of work.
 Accordingly, there have been many efforts to use more efficient network
 hardware and software.  The most popular of these is the Virtual
-Interface Architecture (VIA).  
+Interface Architecture (VIA).
 
 Not only are coherency actions more expensive in the NOW SDSM case than in
 the shared-memory hardware case due to network slowness, there is also
@@ -1532,11 +1530,11 @@ cache blocks, with a typical size being 512 bytes.  In the SDSM case, we
 are dealing with pages, with a typical size being 4096 bytes.  The
 overhead for a cache coherency transaction can thus be large.
 
-\subsubsection{Case Study:  JIAJIA}  
+\subsubsection{Case Study:  JIAJIA}
 
-\textbf{Programmer Interface} 
+\textbf{Programmer Interface}
 
-We will not go into detail on JIAJIA programming here.  There is 
+We will not go into detail on JIAJIA programming here.  There is
 a short tutorial on JIAJIA at
 \url{http://heather.cs.ucdavis.edu/~matloff/jiajia.html}, but
 here is an overview:
@@ -1559,7 +1557,7 @@ is aimed more at message-passing contexts.}  The algorithm consists of n
 phases, in which each processor alternates between trading with its left
 and right neighbors.
 
-\begin{Verbatim}[fontsize=\relsize{-2},numbers=left] 
+\begin{Verbatim}[fontsize=\relsize{-2},numbers=left]
 // JIAJIA example program:  Odd-Even Tranposition Sort
 
 // array is of size n, and we use n processors; this would be more
@@ -1583,16 +1581,16 @@ void oddeven(float *y, int m)
    float newval;
    for (i=0; i < m; i++)  {
       if ((i+jiapid)%2 == 0)  {
-         if (right < m) 
+         if (right < m)
             if (y[jiapid] > y[right]) newval = y[right];
       }
       else  {
-         if (left >= 0) 
+         if (left >= 0)
             if (y[jiapid] < y[left]) newval = y[left];
       }
       jia_barrier();
-      if ((i+jiapid)%2 == 0 && right < m || (i+jiapid)%2 == 1 && left >= 0) 
-            y[jiapid] = newval; 
+      if ((i+jiapid)%2 == 0 && right < m || (i+jiapid)%2 == 1 && left >= 0)
+            y[jiapid] = newval;
       jia_barrier();
    }
 }
@@ -1603,11 +1601,11 @@ main(int argc, char **argv)
    // get command-line arguments (shifted for nodes > 0)
    if (jiapid == 0)  {
       n = atoi(argv[1]);
-      debug = atoi(argv[2]);   
+      debug = atoi(argv[2]);
    }
-   else  { 
+   else  {
       n = atoi(argv[2]);
-      debug = atoi(argv[3]);   
+      debug = atoi(argv[3]);
    }
    jia_barrier();
    // create a shared array x of length n
@@ -1616,7 +1614,7 @@ main(int argc, char **argv)
    jia_barrier();
    // node 0 gets simple test array from command-line
    if (jiapid == 0)  {
-      for (i = 0; i < n; i++) 
+      for (i = 0; i < n; i++)
          x[i] = atoi(argv[i+3]);
    }
    jia_barrier();
@@ -1682,7 +1680,7 @@ and as much as 686 microseconds to make a diff.} Say later a third
 processor calls {\bf jia\_lock()} on that same lock, and then attempts
 to read a variable in that page.  A page fault will occur at that
 processor, resulting in the JIAJIA system running, which will then
-obtain that page from the first processor.  
+obtain that page from the first processor.
 
 Note that all this means the JIAJIA system at each processor must
 maintain a page table, listing where each home page resides.\footnote{In
@@ -1725,13 +1723,13 @@ not arise.}  Allowing multiple writers helps to reduce the performance
 penalty due to false sharing.
 
 % Say Node 3 is the first one to execute
-% 
+%
 % \begin{verbatim}
-% 
+%
 % X = 21;
-% 
+%
 % \end{verbatim}
-% 
+%
 % Since the page in which X lies will have no-access status, the attempted
 % write to X by the application program at this node will cause a page
 % fault at this node, detected by the hardware.  This causes an internal
@@ -1741,42 +1739,42 @@ penalty due to false sharing.
 % signal handler routine will call mprotect() again, this time setting
 % permission for the program to access that page, and then will allow the
 % program to write 21 to its local copy of x.\footnote{That will be in the
-% region set up by malloc().} 
-% 
+% region set up by malloc().}
+%
 % Let's suppse here for concreteness that the SDSM uses an update policy.
 % Then it will send the value 21 (and in fact the entire page) to the
 % other nodes.
-% 
+%
 % Say later Node 8 tries to execute something like
-% 
+%
 % \begin{verbatim}
-% 
+%
 % x = 4;
-% 
+%
 % \end{verbatim}
-% 
+%
 % Again, a page fault will occur, this time at Node 8.  The SDSM system at
 % that node will then send this latest value of X to the other nodes.
 
 % \subsubsection{Programming Around Consistency Issues}
-% \label{workaround} 
-% 
+% \label{workaround}
+%
 % Recall from Section \ref{consistency} that one when node in a
 % shared-memory multiprocessor or SDSM changes the value of a shared
 % variable, there may be some delay before the other nodes are aware of
 % this new value.  The nature of the delay will be determined by the
-% consistency policy implemented in the hardware or SDSM. 
-% 
+% consistency policy implemented in the hardware or SDSM.
+%
 % The situation for SDSMs is the same.  The designers of an SDSM must also
 % set a consistency policy.  For example, look at the JIAJIA example in
 % Section \ref{sdsm}.  Consider the code
-% 
+%
 % \begin{Verbatim}[fontsize=\relsize{-2}]
 % jia_lock(NEXTI_LOCK);
 % NI = (*NextI)++;
 % jia_unlock(NEXTI_LOCK);
 % \end{Verbatim}
-% 
+%
 % JIAJIA is set up so that if a shared variable, in this case {\bf
 % NextI},\footnote{Of course, technically the shared value is in {\bf
 % *NextI}, not in {\bf NextI}.} is changed at one node, the {\bf
@@ -1792,17 +1790,17 @@ penalty due to false sharing.
 % may result in long delays, but on the other hand use of locks has its
 % own delays, due to internode negotiation operations which must take
 % place when {\bf jia\_lock()} is called.
-% 
+%
 % In other words, whether using shared-memory hardware or SDSMs, there
 % will always be some delay before a change to a shared variable at one
 % node is reflected at the other nodes.  Indeed, no matter what, it would
 % be physically impossible for a node to be guaranteed that it has the
 % absolute latest value of a variable.
-% 
+%
 % This is not a problem once one recognizes the situation and programs
 % around it.  Since locks are key to this, it is most important to
 % understand that locks do work.
-% 
+%
 % Consider a bus-based shared-memory multiprocessor, for instance.  Say
 % processors 5 and 6 both have a lock variable {\bf L} in their cache,
 % with value 0, i.e. unlocked, and that both processors happen to execute
@@ -1816,7 +1814,7 @@ penalty due to false sharing.
 % cancel the TAS it had been attempting to execute.  So, TAS
 % \underline{is} working; there is no danger that both processors 5 and 6
 % will acquire the lock here.
-% 
+%
 % Similarly, consider the situation in which the caches in processors 5
 % and 6 show that {\bf L} is 1, i.e. locked, and processor 1 changes {\bf
 % L} to 0.  There will be a delay before news of the change reaches
@@ -1824,14 +1822,14 @@ penalty due to false sharing.
 % will result in the value 1, which is ``old.''  But there is no harm
 % there; the only thing that happens is that one of them acquires the lock
 % a little bit later than it might.
-% 
+%
 % Designers of shared-memory hardware must be extremely careful in setting
 % up their cache coherency system and consistency policy in such a way
 % that ensures that instructions like TAS will do the right thing in all
 % possible scenarios.  Again, ``the right thing'' means that, for
 % instance, two processors cannot both acquire a lock at the same time,
 % even if it does mean some delay.
-% 
+%
 % Similarly, designers of SDSMs must take the some kind of care.  It is a
 % little easier here than in the hardware case, since programmers are
 % forced to ``consult'' with the SDSM system in attempting to acquire a
@@ -1840,17 +1838,17 @@ penalty due to false sharing.
 % That code will then negotiate with its sister code at the other nodes,
 % in a way which is guaranteed to produce a single ``winner'' node which
 % acquires the lock.
-% 
+%
 % So, the programmer can confidently use locks.  Once the programmer
 % understands that, he/she can use locks to ensure correct operation of
 % his/her code in whatever situation arises.
-% 
+%
 % Note also that there are some situations in which locks are not
 % necessary.  Again, the programmer must give careful thought, taking into
 % consideration the issues discussed in this section, before making the
 % decision not to use a lock in that part of the code.
 
-\section{Barrier Implementation} 
+\section{Barrier Implementation}
 
 Recall that a \textbf{barrier} is program code\footnote{Some hardware
 barriers have been proposed.} which has a processor do a wait-loop
@@ -1858,7 +1856,7 @@ action until all processors have reached that point in the
 program.\footnote{I use the word {\it processor} here, but it could be
 just a thread on the one hand, or on the other hand a processing element
 in a message-passing context.}
-  
+
 A function {\bf Barrier()} is often supplied as a library function; here
 we will see how to implement such a library function in a correct and
 efficient manner.  Note that since a barrier is a serialization point
@@ -1870,7 +1868,7 @@ doesn't.
 
 In this section, we will approach things from a shared-memory point of
 view.  But the methods apply in the obvious way to message-passing
-systems as well, as will be discused later. 
+systems as well, as will be discused later.
 
 \subsection{A Use-Once Version}
 
@@ -1897,7 +1895,7 @@ once, so if a program using it doesn't make two calls to {\bf Barrier()}
 it would be fine.  But not otherwise.  If, say, there is a call to {\bf
 Barrier()} in a loop, we'd be in trouble.
 
-What is the problem? Clearly, something must be done to reset 
+What is the problem? Clearly, something must be done to reset
 {\bf Count} to 0 at the end of the call, but doing this safely is not
 so easy, as seen in the next section.
 
@@ -1923,7 +1921,7 @@ barrier call at the end:
 
 \begin{samepage}
 \begin{Verbatim}[fontsize=\relsize{-2},numbers=left]
-struct BarrStruct B;  // global variable 
+struct BarrStruct B;  // global variable
 ........
 while (.......)  {
    .........
@@ -1994,7 +1992,7 @@ else while (PB->Count[Par] > 0) ;
 
 is harming performance, since it has the processor spining around doing
 no useful work.  In the Pthreads context, we can use a condition
-variable:  
+variable:
 
 \begin{samepage}
 \begin{Verbatim}[fontsize=\relsize{-2},numbers=left]
@@ -2010,7 +2008,7 @@ Barrier(struct BarrStruct *PB)
    Par = PB->EvenOdd;
    pthread_mutex_lock(&PB->Lock);
    PB->Count[Par]++;
-   if (PB->Count < PB->NNodes) 
+   if (PB->Count < PB->NNodes)
       pthread_cond_wait(&PB->CV,&PB->Lock);
    else  {
       PB->Count[Par] = 0;
@@ -2069,7 +2067,7 @@ barrier operations:  one of the first group of eight threads, another
 for the other group of eight threads, and a third consisting of a
 ``competition'' between the two groups.   The variable
 {\bf NNodes} above would have the value 8 for the first two barriers,
-and would be equal to 2 for the third barrier.  
+and would be equal to 2 for the third barrier.
 
 Here thread 0 could be the representative for the first group, with
 thread 4 representing the second group.  After both groups's barriers
@@ -2084,7 +2082,7 @@ This would parallelize things somewhat, as critical-section operations
 could be executing simultaneously for the first two barriers.  There
 would still be quite a bit of serial action, though, so we may wish to
 do further splitting, by partitioning each group of four threads into
-two subroups of two threads each.  
+two subroups of two threads each.
 
 In general, for n threads (with n, say, equal to a power of 2) we would
 have a tree structure, with $log_2n$ levels in the tree.  The $i^{th}$
@@ -2100,7 +2098,7 @@ by having a global array {\bf ReachedBarrier}.  When thread 3 and thread
 {\bf ReachedBarrier[3]} to 1, and would then wait for {\bf
 ReachedBarrier[7]} to become 1.  The wait, as before, could either be a
 {\bf while} loop or a call to {\bf pthread\_cond\_wait()}.  Thread 7
-would do the opposite.  
+would do the opposite.
 
 If we have n nodes, again with n being a power of 2, then the barrier
 process would consist of $log_2n$ phases, which we'll call phase 0,
