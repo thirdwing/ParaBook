@@ -83,22 +83,21 @@ x[3] <- 8
 
 \section{安装和载入这些扩展包}
 
-{\bf Installing:}
+{\bf 安装：}
 
-As noted, if you have R 2.14 or later, you already have {\bf snow} and
-{\bf multicore}.  In general, with the exception of {\bf Rgpu}, all of
-the packages above are downloadable/installable from CRAN, the official
-R repository for contributed code, at \url{http://cran.r-project.org}.
-Here's what to do, say for {\bf snow}:
+需要注意的是，如果你使用的是2.14版或更高版本的 R，你已经安装
+了 {\bf snow} 和 {\bf multicore}。一般来说，除了 {\bf rgpu}，
+其它所有扩展包都可以从 R 官方的代码仓库 CRAN\url{http://cran.r-project.org}）下载。
+这里以 {\bf snow} 为例：
 
-Suppose you want to install in the directory {\bf /a/b/c/}.  The easiest
-way to do so is use R's {\bf install.packages()} function, say:
+加入你想把它安装在 {\bf /a/b/c/} 目录下。最简单的方法就是
+使用 R 的函数：
 
 \begin{lstlisting}
 > install.packages("snow","/a/b/c/")
 \end{lstlisting}
 
-This will install {\bf snow} in the directory {\bf /a/b/c/{\bf snow}}.
+这会将 {\bf snow} 安装在 {\bf /a/b/c/{\bf snow}} 目录下。
 
 You'll need to arrange for the directory {\bf /a/b/c} (not {\bf
 /a/b/c/snow}) to be added to your R library search path.  I recommend

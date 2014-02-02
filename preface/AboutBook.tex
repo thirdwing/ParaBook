@@ -5,35 +5,33 @@
 \end{center}
 
 为什么本书和其它的并行编程书籍不同呢？
-主要原因在于我们集中在实现层面，包括：
+原因在于我们主要关注在实现层面：
 
 \begin{itemize}
 
-\item 这里几乎没有理论内容，诸如 O() 分析、最大理论加速、PRAM、有向无环图(DAG)等等；
+\item 这里几乎没有理论内容，诸如 O() 分析、最大理论加速、PRAM、有向无环图(DAG)等等。
 
-\item Real code is featured throughout.
+\item 书中使用的都是真实代码。
 
-\item We use the main parallel platforms---OpenMP, CUDA and MPI---rather
-than languages that at this stage are largely experimental or arcane.
+\item 我们使用的都是主流的并行平台，包括 OpenMP、CUDA 和 MPI，而没有使用
+仍处于实验阶段的其它语言。
 
 \item The running {\it performance} themes---communications latency,
 memory/network contention, load balancing and so on---are interleaved
 throughout the book, discussed in the context of specific platforms or
 applications.
 
-\item Considerable attention is paid to techniques for debugging.
+\item 相当关注 debug 技术。
 
 \end{itemize}
 
-The main programming language used is C/C++, but some of the code is in
-R, which has become the pre-eminent language for data analysis.  As a
-scripting language, R can be used for rapid prototyping.  In our case
-here, it enables me to write examples which are much less less cluttered
-than they would be in C/C++, thus easier for students to discern the
-fundamental parallelixation principles involved.  For the same reason,
-it makes it easier for students to write their own parallel code,
-focusing on those principles.  And R has a rich set of parallel
-libraries.
+书中使用的主要编程语言 C/C++，但也使用了一些 R 代码。R 已经是最主流
+的用于数据分析的语言。作为一门脚本语言，R 可以用于快速原型构建。
+在本书中，我用 R 将可以一些例子表述得远远比用 C/C++ 要简洁，从而
+使得学生更容易的理解所使用的并行计算原则。出于同样的原因，学生们
+也可以更容易地编写并行代码，更加集中精力于这些原则之上。另外，
+R 也有相当丰富的并行库。
+
 
 It is assumed that the student is reasonably adept in programming, and
 has math background through linear algebra.  An appendix reviews the
