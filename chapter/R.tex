@@ -32,29 +32,24 @@ Python 也有很多并行库，比如 {\bf multiprocessing}。关于 Python 的
 
 {\bf R 中进行并行计算的关键就是—— list 结构的操作:}
 
-许多 R 的并行计算扩展包都严重依赖于 R 中的 list 结构。
+许多 R 的并行计算扩展包都非常依赖于 R 中的 list 结构。
 输入输出的参数和返回值经常都采用 list 的形式。读者可能有
 兴趣参考一下附录\ref{chap:rquickstart}中的相关内容。
 
 \section{R 和易并行问题（Embarrassing Parallel Problems）}
 
-It should be noted that parallel R packages tend to work well only on
-embarrassingly parallel problems.  Recall that this was defined (in Sec.
-\ref{embpar}) to mean algorithms that are not only easily parallelized
-but that also have relatively small communication needs.\footnote{This
-latter condition eliminates many iterative algorithms, even though they
-may be easily parallelized.}  As we know, it is often the case that only
-embarrassingly parallel algorithms give good performance, but is
-especially so in the case of R, for the following reasons.
+需要注意的是，R 的并行扩展包一般只能处理易并行问题。正如在
+\ref{embpar}节中定义的，这些问题不仅容易并行化，而且信息传递
+的需求很少。\footnote{后面的要求把很多迭代算法排除在外了，
+尽管它们很容易并行化。}如我们所知，一般只有易并行问题会有
+很好的表现，但在 R 中情况尤其如此，原因如下。
 
-The functional programming nature of R implies that technically, any
-write to a single vector or matrix element, say
-
+R 语言的函数式编程的本质意味着，任何对一个向量或矩阵的元素的写入操作，
+比如
 \begin{lstlisting}
 x[3] <- 8
 \end{lstlisting}
-
-means that the entire vector or matrix is rewritten.\footnote{Element
+都会重写整个向量或矩阵。\footnote{Element
 assignment in R {\it is} a function call, with arguments in the above
 case being {\bf x}, 3 and 8.}  There are exceptions to this (probably
 more and more in each new version of R), but generally we must accept
@@ -277,7 +272,7 @@ a vector, with each column of that matrix being the result of calling
 {\bf f()} on a row or column of {\bf m}.  The same holds for {\bf
 parApply()}.
 
-\subsection{snow 中的其它函数：clusterApply()、clusterCall() 等}
+\subsection{snow 中的其它函数：clusterApply()、clusterCall()等}
 
 In the last section we introduced the {\bf parApply()} function.  Its
 general call form is
