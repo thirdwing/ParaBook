@@ -8,3 +8,5 @@
 英文版更新地址：http://heather.cs.ucdavis.edu/~matloff/158/PLN/ParProcBook.pdf
 
 本书为open textbook，翻译工作也遵循开源原则。请由兴趣翻译的朋友们，积极提交。
+
+注：请使用xelatex编译，中文文件请以UTF-8编码。

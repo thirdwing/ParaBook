@@ -30,18 +30,17 @@ Python 也有很多并行库，比如 {\bf multiprocessing}。关于 Python 的
 而复杂的问题上。在附录\ref{chap:rquickstart}中，有一个5分钟的 R 快速入门。
 阅读时请牢记 R 中 list 结构。
 
-{\bf R 中进行并行计算的关键就是—— list 结构的操作:}
-
-许多 R 的并行计算扩展包都非常依赖于 R 中的 list 结构。
-输入输出的参数和返回值经常都采用 list 的形式。读者可能有
+{\bf R 中进行并行计算的关键就是—— list 结构的操作。}许多 R 的并行计算
+扩展包都非常依赖于 R 中的 list 结构。输入输出的参数和返回值经常
+都采用 list 的形式。读者可能有
 兴趣参考一下附录\ref{chap:rquickstart}中的相关内容。
 
 \section{R 和易并行问题（Embarrassing Parallel Problems）}
 
 需要注意的是，R 的并行扩展包一般只能处理易并行问题。正如在
 \ref{embpar}节中定义的，这些问题不仅容易并行化，而且信息传递
-的需求很少。\footnote{后面的要求把很多迭代算法排除在外了，
-尽管它们很容易并行化。}如我们所知，一般只有易并行问题会有
+的需求很少\footnote{后面的要求把很多迭代算法排除在外了，
+尽管它们很容易并行化。}。如我们所知，一般只有易并行问题会有
 很好的表现，但在 R 中情况尤其如此，原因如下。
 
 R 语言的函数式编程的本质意味着，任何对一个向量或矩阵的元素的写入操作，
@@ -49,43 +48,38 @@ R 语言的函数式编程的本质意味着，任何对一个向量或矩阵的
 \begin{lstlisting}
 x[3] <- 8
 \end{lstlisting}
-都会重写整个向量或矩阵。\footnote{Element
-assignment in R {\it is} a function call, with arguments in the above
-case being {\bf x}, 3 and 8.}  There are exceptions to this (probably
-more and more in each new version of R), but generally we must accept
-that parallel vector and matrix code will be expensive in
-R.\footnote{R's new Reference classes may change this somewhat.}
+都会重写整个向量或矩阵\footnote{R 中的元素赋值是一个函数调用，
+上面这个例子的参数分别为 {\bf x}、3和8。}。虽然有些例外（随着 R 版本
+更新，例外可能越来越多），但一般来说我们必须承认 R 中并行的向量
+和矩阵代码代价很高\footnote{R 中新的引用类（Reference class）可能会对此有所改变。}。
 
-For non-embarrassingly parallel applications, one should consider
-interfacing R to parallel C code, which is described in Section
-\ref{cfromr}.
+对于不易并行的问题，大家应该考虑用 R 调用并行的 C 代码，这点会在\ref{cfromr}
+节中讨论。
 
 \section{一些 R 的并行扩展包}
 
-Here are a few parallel R packages:
+这里我们列举了一些 R 的并行扩展包：
 
 \begin{itemize}
 
-\item Message-passing or scatter/gather (Section \ref{scattergather}):
-{\bf Rmpi}, {\bf snow}, {\bf foreach}, {\bf rmr} (cloud), {\bf Rhipe}
-(cloud), {\bf multicore}\footnote{The {\bf multicore} package runs on
-multicore, i.e. shared memory, machines, but does not share data in the
-read/write sense.}, {\bf rzmq}
+\item Message-passing 或 scatter/gather (\ref{scattergather}节)：
+{\bf Rmpi}、{\bf snow}、{\bf foreach}、{\bf rmr}、{\bf Rhipe}、{\bf multicore}\footnote{{\bf multicore} 扩展包运行于多核
+内存共享的平台之上，但在读写过程中并不共享数据。}、{\bf rzmq}
 
-\item Shared-memory:  {\bf Rdsm}, {\bf bigmemory}
+\item 内存共享：{\bf Rdsm}、{\bf bigmemory}
 
-\item GPU: {\bf gputools}, {\bf rgpu}
+\item GPU：{\bf gputools}、{\bf rgpu}
 
 \end{itemize}
 
-A far more extensive list is at
-\url{http://cran.r-project.org/web/views/HighPerformanceComputing.html}.
+大家可以从
+\url{http://cran.r-project.org/web/views/HighPerformanceComputing.html}找到更加详尽
+的列表。
 
-Starting with version 2.14, the R base distribution includes a {\bf
-parallel} package, consisting of {\bf snow} and {\bf multicore}.
-(Earlier versions must download these separately.)  For this reason,
-both of these are covered here.  I will also cover {\bf Rdsm/bigmemory}
-and {\bf gputools}.
+从2.14版本开始，R 默认包括了由 {\bf snow} 和 {\bf multicore} 构成
+的 {\bf parallel} 扩展包。（早期版本可能需要分别下载。）
+正是因为如此，二者都在范围之内。另外，我们也会讨论
+{\bf Rdsm/bigmemory} 和 {\bf gputools}。
 
 \section{安装和载入这些扩展包}
 
