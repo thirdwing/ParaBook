@@ -99,26 +99,20 @@ x[3] <- 8
 
 这会将 {\bf snow} 安装在 {\bf /a/b/c/{\bf snow}} 目录下。
 
-You'll need to arrange for the directory {\bf /a/b/c} (not {\bf
-/a/b/c/snow}) to be added to your R library search path.  I recommend
-placing a line
-
+之后你需要将目录{\bf /a/b/c}（不是{\bf
+/a/b/c/snow}）加到你的 R 搜索路径中。我推荐大家在
+自己 home 目录下的{\bf .Rprofile}文件（这是 R 的启动设置文件）中添加这样一行。
 \begin{lstlisting}
 .libPaths("/a/b/c/")
 \end{lstlisting}
 
-in a file {\bf .Rprofile} in your home directory (this is an R startup
-file).
+在一些情况下，由于所需库的位置原因，你可能需要手动安装一个 CRAN 上的扩展包。
+这一点请参考下面的\ref{gpuinstall}节和\ref{rgpu}节。
 
-In some cases, due to issues such as locations of libraries, you may
-need to install a CRAN package ``by hand.''  See Section \ref{gpuinstall}
-and \ref{rgpu} below.
+{\bf 载入一个扩展包：}
 
-{\bf Loading a package:}
-
-Call {\bf library()} to load a package.  For instance, to load {\bf
-parallel}, type:
-
+通过调用 {\bf library()} 来载入一个扩展包。
+例如，载入{\bf parallel}，可以使用：
 \begin{lstlisting}
 > library(parallel)
 \end{lstlisting}
@@ -126,26 +120,22 @@ parallel}, type:
 \section{R 中的 snow 扩展包}
 \label{snow}
 
-The real virtue of {\bf snow} is its simplicity.  The concept is simple,
-the implementation is simple, and very little can go wrong.
-Accordingly, it may be the most popular type of parallel R in use today.
+{\bf snow}最大的优点在于其简单。其概念和实现都非常简单，
+能出错的地方不多。因此，它可能是现在使用最广泛的 R 并行包。
 
-The {\bf snow} package runs directly via network sockets (probably the
-most common usage, since the user does not have to install anything
-besides {\bf snow}), or on top of {\bf Rmpi} (R's interface to MPI), PVM
-or NWS.
 
-It operates under a scatter/gather model (Sec.
-\ref{scattergather}).
+{\bf snow} 扩展包可以直接通过network socket运行
+（由于用户只需要安装{\bf snow}，着可能是最常见的用法），
+也可以运行于{\bf Rmpi}（R 的 MPI 接口）、PVM 或 NWS之上。
 
-For instance, just as the ordinary R function {\bf apply()} applies the
-same function to all rows of a matrix (example below), the {\bf snow}
-function {\bf parApply()} does that in parallel, across multiple
-machines; different machines will work on different rows.  (Instead of
-running on several machines, we might one several {\bf snow} clients on
-one multicore machine.)
+它也可以在一个 scatter/gather 模型（\ref{scattergather}节）下
+进行操作。正如 R 中的{\bf apply()}函数会将同样的函数作用于
+一个矩阵的每行上（见下面的示例），{\bf snow}中
+的{\bf parApply()}会在多台机器上并行地完成类似的操作；
+不同的机器会操作不同的行。（除了使用多台机器，我们也可以
+在多核的机器上运行多个{\bf snow} client。）
 
-\subsection{Usage}
+\subsection{使用}
 
 After loading {\bf snow}, by typing
 
