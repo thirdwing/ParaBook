@@ -13,13 +13,11 @@
 
 \item 书中使用的都是真实代码。
 
-\item 我们使用的都是主流的并行平台，包括 OpenMP、CUDA 和 MPI，而没有使用
-仍处于实验阶段的其它语言。
+\item 我们使用的都是主流的并行平台，包括 OpenMP、CUDA 和 MPI，而没有使用其它
+仍处于实验阶段的语言。
 
-\item The running {\it performance} themes---communications latency,
-memory/network contention, load balancing and so on---are interleaved
-throughout the book, discussed in the context of specific platforms or
-applications.
+\item 关于性能的主题——通信延迟、内存/网络连接、负载均衡等，在全书中
+交叉进行，并且都是在特定平台或应用的层面进行讨论的。
 
 \item 相当关注 debug 技术。
 
@@ -32,51 +30,37 @@ applications.
 也可以更容易地编写并行代码，更加集中精力于这些原则之上。另外，
 R 也有相当丰富的并行库。
 
+我们假设学生在编程方面是有相当经验的，并有包括线性代数在内的数学背景。
+附录里回顾了本书所需要的数学知识。另一个附录提供了不同系统问题的概述，
+包括进程调度和虚拟内存等。
 
-It is assumed that the student is reasonably adept in programming, and
-has math background through linear algebra.  An appendix reviews the
-parts of the latter needed for this book.  Another appendix presents an
-overview of various systems issues that arise, such as process
-scheduling and virtual memory.
+需要特别说明的是，书中多数代码没有进行优化。我们主要关注的是技术和语言
+使用的清晰明了。然而，有很多影响速度的因素值得讨论，比如高速缓存一致性问题、
+网络延迟、GPU 内存结构等等。
 
-It should be note that most of the code examples in the book are NOT
-optimized.  The primary emphasis is on simplicity and clarity of the
-techniques and languages used.  However, there is plenty of discussion
-on factors that affect speed, such cache coherency issues, network
-delays, GPU memory structures and so on.
+这里展示了你可以如何使用书中的代码：
+本书使用 \LaTeX 排版，原始的 {\bf .tex} 文件可以在
+\url{http://heather.cs.ucdavis.edu/~matloff/158/PLN}下载。
+请直接下载相关文件（文件名应该足够明），之后使用一个文本编辑器
+进行裁剪，从而得到感兴趣的代码。 
 
-Here's how to get the code files you'll see in this book: The book is
-set in LaTeX, and the raw {\bf .tex} files are available in
-\url{http://heather.cs.ucdavis.edu/~matloff/158/PLN}.  Simply download
-the relevant file (the file names should be clear), then use a text
-editor to trim to the program code of interest.
+为了向学生展示研究和教学的相互促进关系，我会时不时引用我的一些研究工作。
 
-In order to illustrate for students the fact that research and teaching
-(should) enhance each other, I occasionally will make brief references
-here to some of my research work.
+如同我的其它开源图书，本书是在\textbf{不停变动}中的。我会继续添加新的主题
+、新的示例等等，当然也会修补漏洞和改善说明。由于这个原因，所以
+保存本书最新版本的链接，\url{http://heather.cs.ucdavis.edu/~matloff/158/PLN/ParProcBook.pdf}，
+比保存一份拷贝更好。
 
-Like all my open source textbooks, this one is {\bf constantly
-evolving}.  I continue to add new topics, new examples and so on, and of
-course fix bugs and improve the exposition.  For that reason, it is
-better to link to the latest version, which will always be at
-\url{http://heather.cs.ucdavis.edu/~matloff/158/PLN/ParProcBook.pdf},
-rather than to copy it.
+同样出于这个原因，我非常希望得到反馈。这里我希望感谢 Stuart
+Ambler、Matt Butner、Stuart Hansen、Bill Hsu、Sameer Khan、Mikel
+McDaniel、Richard Minner、Lars Seeman、Marc Sosnick 和 Johan Wikstr{\"o}m 的评论。
+特别感谢 Hsu 教授为我提供了高级的 GPU 设备。
 
-For that reason, feedback is highly appreciated.  I wish to thank Stuart
-Ambler, Matt Butner, Stuart Hansen, Bill Hsu, Sameer Khan, Mikel
-McDaniel, Richard Minner, Lars Seeman, Marc Sosnick,
-and Johan Wikstr{\"o}m for their
-comments.  I'm also very grateful to Professor Hsu for his making
-available to me advanced GPU-equipped machines.
+各位可能对我另一本关于概览和统计的开源图书感兴趣，可以在
+\url{http://heather.cs.ucdavis.edu/probstatbook}下载。
 
-You may also be interested in my open source textbook on probability and
-statistics, at \url{http://heather.cs.ucdavis.edu/probstatbook}.
-
-This work is licensed under a Creative Commons Attribution-No Derivative
-Works 3.0 United States License. Copyright is retained by N. Matloff in
-all non-U.S. jurisdictions, but permission to use these materials in
-teaching is still granted, provided the authorship and licensing
-information here is displayed in each unit. I would appreciate being
-notified if you use this book for teaching, just so that I know the
-materials are being put to use, but this is not required.
-
+本书使用 Creative Commons Attribution-No Derivative
+Works 3.0 United States License 发行。在美国境外的版权
+归 Matloff 所有，在保证提供作者和发行信息的情况，这些材料
+仍可用于教学使用。如果您使用了本书用于教学，我将很高兴您能
+通知我，这仅仅为了让我知道这些材料正在被使用当中，但这不是必须的。
