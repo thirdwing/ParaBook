@@ -137,22 +137,18 @@ x[3] <- 8
 
 \subsection{使用}
 
-After loading {\bf snow}, by typing
-
+在使用
 \begin{lstlisting}
 > library(snow)
 \end{lstlisting}
+载入{\bf snow}之后，通过调用{\bf snow}中的{\bf makeCluster()}函数，
+我们可以设置一个{\bf snow}集群。该函数的{\bf type}参数用于选择
+网络平台，诸如``MPI''或``SOCK''。后者用于将{\bf snow}运行
+于其自己创建的 TCP/IP sockets 之上，而不是使用 MPI 。
 
-one sets up a {\bf snow} cluster, by calling the {\bf snow} function
-{\bf makeCluster()}.  The named argument {\bf type} of that function
-indicates the networking platform, e.g. ``MPI'' or ``SOCK." The last
-indicates that you wish {\bf snow} to run on TCP/IP sockets that it
-creates itself, rather than going through MPI etc.
-
-In the examples here, I used ``SOCK,'' on machines named {\bf pc48} and
-{\bf pc49}, setting up the cluster this way:\footnote{If you are on a
-shared-file system group of machines, try to stick to ones for which the
-path to R is the same for all, to avoid problems.}
+在这个例子里，我在名为{\bf pc48}和{\bf pc49}的电脑上使用``SOCK''选择，
+以这种方式设置集群\footnote{如果你使用的是一个文件共享系统的电脑集群，
+尽量保证 R 的安装路径一直，以避免问题。}：
 
 \begin{lstlisting}
 > cls <- makeCluster(type="SOCK",c("pc48","pc49"))
