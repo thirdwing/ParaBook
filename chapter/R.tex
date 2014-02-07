@@ -199,7 +199,7 @@ x[3] <- 8
 但是让我们看看如何使用 R 的{\bf apply()}来完成它。尽管这仍是
 顺序执行，但这为我们扩展到并行计算提供了便利。
 
-R 的{\bf apply()}函数调用一个用户定义的 scalar-valued 函数
+R 的{\bf apply()}函数调用一个用户定义的标量函数
 作用于用户指定的矩阵的每一行（或每一列）。为了将{\bf apply()}用于
 这里的矩阵向量相乘问题，我们定义一个点积的函数：
 
@@ -231,28 +231,23 @@ dot(c(1,7),c(1,1))
 [1]  8 10 12 14 16 18
 \end{lstlisting}
 
-What {\bf parApply()} did was to send some of the rows of the matrix to
-each node, also sending them the function {\bf dot()} and the argument
-{\bf c(1,1)}.  Each node applied {\bf dot()} to each of the rows it was
-given, and then returned the results to be assembled by the manager node.
+{\bf parApply()}所作的就是将矩阵每一行发送给每一个节点，
+同时发送的还由函数{\bf dot()}和参数{\bf c(1,1)}。
+每个节点将{\bf dot()}作用到接收的行上，之后将结果返回给管理节点。
 
-R's {\bf apply()} function is normally used in scalar-valued situations,
-meaning that {\bf f()} in a call {\bf apply(m,i,f)} is scalar-valued.
-If {\bf f()} is vector-valued, then a matrix will be returned instead of
-a vector, with each column of that matrix being the result of calling
-{\bf f()} on a row or column of {\bf m}.  The same holds for {\bf
-parApply()}.
+R 的{\bf apply()}函数一般只用于变量值的情形，这意味着{\bf apply(m,i,f)}
+调用中的函数{\bf f()}的返回值是标量。如果{\bf f()}的返回值是向量值，
+那返回的会是一个矩阵而不是一个向量，矩阵里的每一列是
+{\bf f()}作用于{\bf m}的一列或一行的结果。
+{\bf parApply()}也同样如此。
 
 \subsection{snow 中的其它函数：clusterApply()、clusterCall()等}
 
-In the last section we introduced the {\bf parApply()} function.  Its
-general call form is
+上一节，我们介绍了{\bf parApply()}函数。它可以这样调用
 
 \begin{itemize}
 
-\item {\bf parApply():}
-
-The call
+\item {{\bf parApply()}:}
 
 \begin{lstlisting}
 parApply(cls,m,DIM,f,...)}
@@ -260,7 +255,7 @@ parApply(cls,m,DIM,f,...)}
 
 \end{itemize}
 
-results in the rows of the matrix {\bf m} parceled out to the various
+这个调用的结果是results in the rows of the matrix {\bf m} parceled out to the various
 worker nodes of {\bf cls}, at which {\bf f()} will be applied to each
 row, with optional parameters in the position indicated by the ellipsis.
 The argument {\bf DIM} is 1 for row operations, 2 for columns.
@@ -393,7 +388,7 @@ expression} at each worker node in {\bf cls}.
 
 \end{itemize}
 
-\subsection{Example:  Parallel Sum}
+\subsection{示例：并行求和}
 
 Let's go over one more toy problem, in which we have {\bf snow} do
 parallel summation.  We'll do a simpler version, then a more advanced
