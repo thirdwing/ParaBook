@@ -148,29 +148,27 @@ x[3] <- 8
 
 在这个例子里，我在名为{\bf pc48}和{\bf pc49}的电脑上使用``SOCK''选择，
 以这种方式设置集群\footnote{如果你使用的是一个文件共享系统的电脑集群，
-尽量保证 R 的安装路径一直，以避免问题。}：
+尽量保证 R 的安装路径一致，以避免问题。}：
 
 \begin{lstlisting}
 > cls <- makeCluster(type="SOCK",c("pc48","pc49"))
 \end{lstlisting}
 
-Note that the above R code sets up {\bf worker nodes} at the machines
-named {\bf pc48} and {\bf pc49}; these are in addition to the {\bf
-manager node}, which is the machine on which that R code is
-executed.
+需要注意的是上面的 R 代码在名为{\bf pc48}和{\bf pc49}的机器上设置了
+{\bf 工作节点}；这和{\bf 管理节点}相区别，管理节点运行于
+执行 R 代码的机器上。
 
-By the way, if you want to make worker nodes on the same machine as the
-manager (typically on a multicore machine), use {\bf localhost} as the
-machine name.
+如果你想把工作节点和管理节点同时运行在同一台机器上（特别是在一台多核的机器上），
+需要使用{\bf localhost}作为机器名。
 
-There are various other optional arguments.  One you may find useful is
-{\bf outfile}, which records the result of the call in the file {\bf
-outfile}.  This can be helpful for debugging if the call fails.
+还有其它很多可选的参数。一个你可能觉得非常有用的是{\bf outfile}，
+它会把调用的结果记录在名为{\bf outfile}的文件里。
+这在调用失败进行 debug 时非常有用。
 
 \subsection{示例：使用 parApply() 进行矩阵向量相乘}
 
-To introduce {\bf snow}, consider a simple example of multiplication of
-a vector by a matrix.  We set up a test matrix:
+为了介绍{\bf snow}，让我们考虑一个简单的矩阵向量相乘
+的简单示例。我是指一个测试矩阵如下：
 
 \begin{lstlisting}[numbers=left]
 > a <- matrix(c(1:12),nrow=6)
@@ -184,11 +182,10 @@ a vector by a matrix.  We set up a test matrix:
 [6,]    6   12
 \end{lstlisting}
 
-We will multiply the vector $(1,1)^{T}$ (T meaning transpose) by our
-matrix {\bf a}.  In this small example, of course, we would do that
-directly:
+我们会将向量 $(1,1)^{T}$ （T 这里表示转置）和矩阵相乘。
+在这个简单的示例，我们当然可以直接完成：
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 > a %*% c(1,1)
      [,1]
 [1,]    8
@@ -199,40 +196,35 @@ directly:
 [6,]   18
 \end{lstlisting}
 
+但是让我们看看如何使用 R 的{\bf apply()}来完成它。尽管这仍是
+顺序执行，但这为我们扩展到并行计算提供了便利。
 
-But let's see how we could do it using R's {\bf apply()} function, still
-in serial form, as it will set the stage for extending to parallel
-computation.
-
-R's {\bf apply()} function calls a user-specified, scalar-valued
-function to each of the rows (or each of the columns) of a
-user-specified matrix.  This returns a vector.  To use {\bf apply()} for
-our matrix-times-vector problem here, define a dot product function:
+R 的{\bf apply()}函数调用一个用户定义的 scalar-valued 函数
+作用于用户指定的矩阵的每一行（或每一列）。为了将{\bf apply()}用于
+这里的矩阵向量相乘问题，我们定义一个点积的函数：
 
 \begin{lstlisting}
 > dot <- function(x,y) {return(x%*%y)}
 \end{lstlisting}
 
-Now call {\bf apply()}:
+现在调用{\bf apply()}：
 
 \begin{lstlisting}
 > apply(a,1,dot,c(1,1))
 [1]  8 10 12 14 16 18
 \end{lstlisting}
 
-This call applies the function {\bf dot()} to each row (indicated by the
-1, with 2 meaning column instead of row) of the matrix {\bf a}; a row
-plays the role of the first argument to {\bf dot()}, and with c(1,1)
-playing the role of the second argument.  In other words, the first call
-to {\bf dot()} will be
+这个调用将函数{\bf dot()}作用于矩阵{\bf a}的每一行
+（这个可以从1看出，2意味着每一列）；每一行都将作为
+{\bf dot()}的第一个参数，而c(1,1)会作为第二个参数。
+换言之，{\bf dot()}的第一次调用就是
 
 \begin{lstlisting}
 dot(c(1,7),c(1,1))
 \end{lstlisting}
 
-The {\bf snow} library function {\bf parApply()} then extends {\bf
-apply()} to parallel computation.  Let's use it to parallelize our
-matrix multiplication, across our the machines in our cluster {\bf cls}:
+{\bf snow}中的{\bf parApply()}函数将{\bf apply()}扩展到并行计算。
+我们把它用于将我们的矩阵相乘问题并行化，运行在我们名为{\bf cls}的集群之上：
 
 \begin{lstlisting}
 > parApply(cls,a,1,dot,c(1,1))
@@ -1789,37 +1781,36 @@ void meanout(int *hm, int *nrc, double *meanmut)
 The code is hardly optimal.  We should, for instance, have more than one
 thread per block.
 
-\section{Debugging R Applications}
+\section{调试 R 程序}
 
-The built-in debugging facilities in R are primitive, but alternatives
-are available.
+R 内置的调试机制是首选，在还存在着其它选择。
 
-\subsection{Text Editors}
+\subsection{文本编辑器}
 
-However, if you are a Vim editor fan, I've developed a tool that greatly
-enhances the power of R's debugger.  Download {\bf edtdbg} from R's CRAN
-repository.  It's also available for Emacs.
+然而，如果你是一个 Vim 编辑器的粉丝，我开发了一个可以极大扩展 R 调试器
+的工具。请从 R 的 CRAN 上下载{\bf edtdbg}。
+Emacs 中也有类似的工具。
 
-Vitalie Spinu's {\tt ess-tracebug} runs under Emacs.  It was modeled
-roughly on {\tt edtdbg}, but has more Emacs-specific features
-than does {\tt edtdbg}.
+Vitalie Spinu 的 {\tt ess-tracebug} 运行于 Emacs。
+它大体基于{\tt edtdbg}，但提供了更多的针对 Emacs 的特性。
 
-\subsection{IDEs}
+\subsection{IDE}
 
-I'm personally not a fan of IDEs, but some excellent ones are available.
+我个人不是提倡使用 IDE，但的确有一些很优秀的 IDE。
 
-REvolution Analytics, a firm that offers R consulting and develops
-souped-up versions of R, offers an IDE for R that includes nice
-debugging facilities.  It is only available on Windows, and even then
-only for those who have Microsoft Visual Studio.
+REvolution Analytics，一家提供 R 咨询和再开发版本 R 的公司，
+他们提供了一个包含了很好的调试机制的 IDE。
+但它只可以在 Windows 上运行，而且必须安装 Microsoft Visual Studio。
 
-The developers of StatET, a platform-independent Eclipse-based IDE for
-R added a debugging tool in May 2011.
+StatET，一个基于 Eclipse 的跨平台 IDE的开发者
+在2011年五月添加了调试工具。
 
-The people developing RStudio, another  a platform-independent IDE for
-R, also plan to begin work on a debugger, beginning summer 2011.
 
-\subsection{The Problem of Lack of a Terminal}
+RStudio，另一个跨平台的 IDE的开发者，从2011年夏天也开始计划添加调试器
+\footnote{译者注：RStudio 中的调试功能已添加}。
+
+
+\subsection{缺少命令行终端的问题}
 
 Parallel R packages such as {\bf Rmpi}, {\bf snow}, {\bf foreach} and so
 on do not set up a terminal for each process, thus making it impossible
@@ -1853,7 +1844,7 @@ a breakpoint at the C function you want to debug, say {\bf subdiag()} in
 our example above.  Finally, tell GDB to continue, and it will then stop
 in your function!  Here's how your session will look:
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 $ R -d gdb
 GNU gdb 6.8-debian
 ...
@@ -1863,7 +1854,7 @@ Starting program: /usr/lib/R/bin/exec/R
 > dyn.load("sd.so")
 \end{lstlisting}
 
-\section{Other R Examples in This Book}
+\section{本书中的其它 R 语言示例}
 
 See these examples (some nonparallel):
 
