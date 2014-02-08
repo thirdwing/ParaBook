@@ -255,72 +255,59 @@ parApply(cls,m,DIM,f,...)}
 
 \end{itemize}
 
-这个调用的结果是results in the rows of the matrix {\bf m} parceled out to the various
-worker nodes of {\bf cls}, at which {\bf f()} will be applied to each
-row, with optional parameters in the position indicated by the ellipsis.
-The argument {\bf DIM} is 1 for row operations, 2 for columns.
+这个调用会把矩阵{\bf m}的每一行分配到{\bf cls}
+的各个工作节点，之后函数{\bf f()}会被作用到每一行，
+省略号在这里表示可选参数。参数{\bf DIM}为1时表示行操作，
+2表示列操作。
 
-The return value is a vector (or possibly a matrix, as noted above).
+返回值是一个向量（也可能是个矩阵，如上所述）。
 
-The virtue of {\bf snow} is its simplicity.  Thus it does not have a lot
-of complex functions.  But there is certainly more than just {\bf
-parApply()}.  Here are a few more:
+{\bf snow}最大的有点在于其简单，因此并没有很多复杂的函数，
+但当然不止{\bf parApply()}一个。这里列举了一些：
 
 \begin{itemize}
 
 \item {\bf clusterApply():}
 
-This function may be the most heavily-used function in {\bf snow}.  The
-call
+这个函数可能是{\bf snow}中被使用最频繁的函数。
 
 \begin{lstlisting}
 clusterApply(cls,individualargs,f,...)}
 \end{lstlisting}
 
-runs {\bf f()} at each worker node in {\bf cls}.  Here {\bf
-individualargs} is an R list (if it is a vector, it will be converted to
-a list).  When {\bf f()} is called at node i of the cluster, its
-arguments will be as follows.  The first argument will be the i$^{th}$
-element of the {\bf individualargs}, i.e. {\bf individualargs[[i]]}.  If
-arguments indicated by the ellipsis are in the call (optional), then
-these will be passed to {\bf f()} as its second, third and so on
-arguments.
+这会使{\bf f()}在{\bf cls}中的每个节点上运行。这里的{\bf individualargs}
+是一个 R 列表（如果是个向量，会被转换成列表）。当{\bf f()}在集群
+中的节点 i 上被调用时，其参数如下所述：第一个参数
+是{\bf individualargs}的第 i 个元素，或者说是{\bf individualargs[[i]]}；
+如果在调用时，是用了省略号所代表的（可选）参数，它们会作为第二、第三或
+更多的参数传递给{\bf f()}。
 
-If {\bf individualargs} has more elements than the number of nodes in
-the cluster, then {\bf cls} will be recycled (treating it as a vector),
-so that most or all nodes will call {\bf f()} on more than element of
-{\bf individualargs}.
-
-The return value is an R list, whose i$^{th}$ component is the result of
-the call to {\bf f()} on the i$^{th}$ element of {\bf individualargs}.
-
-Typically the list {\bf individualargs} consists of the work to be split
-up and done in parallel.
+如果{\bf individualargs}的元素数量大于集群中的节点数，
+那么{\bf cls}会被循环使用（可以把它作为一个向量对待），
+所以多数或全部节点会在不止一个{\bf individualargs}元素
+上调用{\bf f()}。返回值是一个 R 列表，其中第 i 个元素是{\bf f()}
+作用于{\bf individualargs}中第 i 个元素的结果。
+所以说，{\bf individualargs}列表又需要拆分并行计算的工作构成。
 
 \item {\bf clusterApplyLB():}
 
-This is a load-balancing form of {\bf clusterApply()}, aimed at
-addressing the performance issues we discussed on Chapter
-\ref{chap:issues}.
+这是{\bf clusterApply()}的负载均衡模式，
+目的在于解决我们在第\ref{chap:issues}章中提到的性能问题。
 
-To explain the difference between the two forms of the cluster-apply
-operation, suppose our cluster consists of 10 nodes, and that we have 25
-tasks for them to do (i.e. {\bf individualargs} has length 25).  With
-{\bf clusterApply()}, the following will occur:
+为了解释{\bf clusterApply()}的两者形式的区别，
+假设我们的集群由10个节点，而我们有25个需要执行的任务
+（或者说{\bf individualargs}的长度是25）。如果使用{\bf clusterApply()}，
+会发生下列这些：
 
 \begin{itemize}
 
-\item The first 10 tasks will be sent to the workers, one task per
-worker.
+\item 前10个任务会被分配给工作节点，每个节点一个任务。
 
-\item The manager will wait for all 10 tasks to complete, and then will
-send out the next 10.
+\item 管理节点会等这10个任务完成，之后再分配另外10个。
 
-\item The manager will wait for these 10 tasks to complete, and then will
-send out the remaining 5.
+\item 管理节点会等这10个任务完成，之后在分配剩下的5个。
 
-\item The manager will wait for the results of these 5, and then return
-the 25 results to the caller.
+\item 管理节点会等这5个任务完成，之后返回25个结果。
 
 \end{itemize}
 
