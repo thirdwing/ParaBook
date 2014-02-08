@@ -311,43 +311,35 @@ clusterApply(cls,individualargs,f,...)}
 
 \end{itemize}
 
-By contrast, with {\bf clusterApplyLB()}, the event flow will go this
-way:
+而是用{\bf clusterApplyLB()}时，会按照下面这种方式执行：
 
 \begin{itemize}
 
-\item The first 10 tasks will be sent to the workers, one task per
-worker.
+\item 前10个任务会被分配给工作节点，每个节点一个任务。
 
-\item When some node finishes, the manager will take action right away,
-sending the 11$^{th}$ task to this node, even though the others aren't
-done.
+\item 当由节点任务结束时，管理节点会马上行动，将第11个任务分配
+给这个节点，即使其它节点的任务还没完成。
 
-\item The manager will continue in this fashion, giving each node a new
-task as soon as the node finishes its old one, until all the tasks are
-done.
+\item 管理节点会继续照此工作，一旦一个节点任务完成，就会分配新的
+任务，知道所有任务完成。
 
-\item The manager will then return the 25 results to the caller.
+\item 管理节点最后会返回25个结果。
 
 \end{itemize}
 
-In the language of Chapter \ref{chap:issues}, and of Section
-\ref{schedulework} of our OpenMP chapter, {\bf clusterApply()} employs a
-{\bf static} scheduling policy, while {\bf clusterApplyLB()} uses a
-dynamic one; chunk size is 1.
+用第\ref{chap:issues}章和 OpenMP 一章中的\ref{schedulework}节的说法，
+{\bf clusterApply()}使用了一种{\bf 静态}的调度策略，
+而{\bf clusterApplyLB()}使用了一种动态策略；其中 chunk size 为1。
 
-\item {\bf clusterCall():}
+\item {\bf clusterCall()：}
 
-The function {\bf clusterCall(cls,f,...)} sends the function {\bf f()},
-and the set of arguments (if any) represented by the ellipsis above to
-each worker node, where {\bf f()} is evaluated on the arguments.  The
-return value is an R list, with the i$^{th}$ element is the result of
-the computation at node i in the cluster.  (It might seem at first that
-each node will return the same value, but typically the {\tt f()} will
-make use of variables special to the node, thus yielding different
-results.)
+函数{\bf clusterCall(cls,f,...)}将函数{\bf f()}和省略号所代表的参数（如果有的话），
+发送到每个工作节点。在每个节点上，{\bf f()}会使用这些参数求值。
+返回值是一个 R 列表，第 i 个元素师第 i 个节点的计算结果。
+（一眼看上去，似乎每个节点都会返回同样的结果，但{\tt f()}会
+使用每个节点特定的参数，从而返回不同的结果。）
 
-\item {\bf clusterExport():}
+\item {\bf clusterExport()：}
 
 The function {\bf clusterExport(cls,varlist)} copies the variables whose
 names appear in the character vector {\bf varlist} to each worker in the
@@ -368,7 +360,7 @@ manager to the workers, their copies become independent of the one at
 the manager (and independent of each other).  If one copy changes, that
 change will not be reflected in the other copies.
 
-\item {\bf clusterEvalQ():}
+\item {\bf clusterEvalQ()：}
 
 The function {\bf clusterEvalQ(cls,expression)} runs {\bf
 expression} at each worker node in {\bf cls}.
@@ -1633,17 +1625,16 @@ Note that we needed to allocate space for {\tt result} in our call, in a
 variable we've named {\tt result}.  The value placed in there by our
 function is seen above to be correct.
 
-\subsection{Calling C OpenMP Code from R}
+\subsection{在 R 中调用 OpenMPI C 代码}
 
-Since OpenMP is usable from C, that makes it in turn usable from R.
-(See Chapter \ref{chap:omp} for a detailed discussion of OpenMP.)
+由于 OpenMP 可以由 C 使用，这就使得其可以从 R 中调用。
+（关于 OpenMP 的详细讨论请见第\ref{chap:omp}章。）
 
-The code is compiled and then loaded into R as in Section
-\ref{cfromr}, though with the additional step of specifying the
-{\tt -fopenmp} command-line option in both invocations of GCC
-(which you run by hand, instead of using {\bf R CMD SHLIB}).
+在\ref{cfromr}节中类似，代码被编译并载入到 R 会话，
+尽管有一些额外的步骤用于在调用 GCC 时设置{\tt -fopenmp}参数
+（你需要手动运行，而不是使用{\bf R CMD SHLIB}）。
 
-\subsection{Calling CUDA Code from R}
+\subsection{在 R 中调用 CUDA 代码}
 
 The same principles apply here, but one does have to be careful with
 libraries and the like.
@@ -1686,7 +1677,7 @@ $mo
 [1] 0.3333333
 \end{lstlisting}
 
-\subsection{Example:  Mutual Outlinks}
+\subsection{示例：Mutual Outlinks}
 
 We again take as our example the mutual-outlinks example from Section
 \ref{mutlinks}.  Here is an R/CUDA version:
