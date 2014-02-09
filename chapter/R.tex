@@ -341,53 +341,48 @@ clusterApply(cls,individualargs,f,...)}
 
 \item {\bf clusterExport()：}
 
-The function {\bf clusterExport(cls,varlist)} copies the variables whose
-names appear in the character vector {\bf varlist} to each worker in the
-cluster {\bf cls}.  You can use this, for instance, to avoid constant
-shipping of large data sets from the master to the workers, at great
-communications costs.  With this function, you are able to ship a
-quantity just once; you call {\bf clusterExport()} on the corresponding
-variables, and then access those variables at worker nodes as
-(node-specific) globals.  Again, the return value is an R list, with the
-i$^{th}$ element is the result of the computation at node i in the
-cluster.
+函数{\bf clusterExport(cls,varlist)}会将名字出现在字符向量{\bf varlist}
+中的变量拷贝到{\bf cls}中的各个节点。你可以使用这个函数来
+避免从管理节点到工作节点开销巨大的数据传输。
+使用这个函数，你可以只传输数据集一次；
+通过在相应的变量上使用{\bf clusterExport()}，之后在工作节点上
+将其作为全局变量使用。
+同样地，返回值仍是个 R 列表，第 i 个元素师集群中第 i 个节点的
+计算结果。
 
-By default, the variables to be exported must be global on the manager
-node.
+默认情况下，被传输到工作节点的变量在管理节点上必须是全局变量。
 
-Note carefully that once you export a variable, say {\bf x}, from the
-manager to the workers, their copies become independent of the one at
-the manager (and independent of each other).  If one copy changes, that
-change will not be reflected in the other copies.
+需要特别注意的是，一旦你传输了一个变量，比如{\bf x}，
+从管理节点到各个工作节点上，各个拷贝和工作节点上的变量就是独立的了
+（各个拷贝之间也是相互独立的）。如果其中一个拷贝改变了，
+在其他拷贝中不会反应这些变化。
 
 \item {\bf clusterEvalQ()：}
 
-The function {\bf clusterEvalQ(cls,expression)} runs {\bf
-expression} at each worker node in {\bf cls}.
+函数{\bf clusterEvalQ(cls,expression)}会在{\bf cls}的各个节点
+上运行{\bf expression}。
 
 \end{itemize}
 
 \subsection{示例：并行求和}
 
-Let's go over one more toy problem, in which we have {\bf snow} do
-parallel summation.  We'll do a simpler version, then a more advanced
-one.
+现在让我们再看一个示例，我们用{\bf snow}来进行并行求和。
+先从一个很简单的版本开始，之后再考虑复杂的版本。
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 parsum <- function(cls,x) {
-   # partition the indices of x among the cluster nodes (nothing
-   # is actually sent to them yet)
+   # `在节点上分配' x 的索引（实际上没有传输任何东西）
    xparts <- clusterSplit(cls,x)
-   # now send to the nodes and have them sum
+   # 现在传输到节点上，并进行求和
    tmp <- clusterApply(cls,xparts,sum)
-   # now finish, combing the individual sums into the grand total
+   # 现在将各个单独的加和合并得到结果
    tot <- 0
    for (i in 1:length(tmp)) tot <- tot + tmp[[i]]
    return(tot)
 }
 \end{lstlisting}
 
-Let's test it on a two-worker cluster {\bf cls}:
+现在我们在一个有两个共走节点的集群{\bf cls}上进行测试：
 
 \begin{lstlisting}
 > x
@@ -396,7 +391,7 @@ Let's test it on a two-worker cluster {\bf cls}:
 [1] 51
 \end{lstlisting}
 
-Good.  Now, how does it work?
+结果不错。现在我们来想一下，这是如何完成的？
 
 The basic idea is to break our vector into chunks, then distribute the
 chunks to the worker nodes.  Each of the latter will sum its chunk, and
