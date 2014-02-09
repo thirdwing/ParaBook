@@ -393,17 +393,16 @@ parsum <- function(cls,x) {
 
 结果不错。现在我们来想一下，这是如何完成的？
 
-The basic idea is to break our vector into chunks, then distribute the
-chunks to the worker nodes.  Each of the latter will sum its chunk, and
-send the sum back to the manager node.  The latter will sum the sums,
-giving us the grand total as desired.
+最基本的想法就是讲我们的向量分块，之后分配给工作节点。
+每个工作节点会把所分配的小块求和，再把结果返回给管理节点。
+管理节点会把这些结果求和，返回我们想要的求和的最终结果。
 
-In order to break our vector {\bf x} into chunks to send to the workers,
-we'll first turn to the {\bf snow} function {\bf clusterSplit()}.  That
-function inputs an R vector and breaks it into as many chunks as we have
-worker nodes, just what we want.
+为了将我们的向量{\bf x}分块并发给各个节点，
+我先来看{\bf snow}中的函数{\bf clusterSplit()}。
+这个函数的输入是一个 R 向量，之后将其分块，分块的数量和
+工作节点数相同。
 
-For example, with {\bf x} as above on a two-worker cluster, we get
+例如，在上面的两个工作节点的集群上，我们得到：
 
 \begin{lstlisting}
 > xparts <- clusterSplit(cls,x)
@@ -415,9 +414,9 @@ For example, with {\bf x} as above on a two-worker cluster, we get
 [1]  5  6  5 12 13
 \end{lstlisting}
 
-Sure enough, our R list {\bf xparts} has one chunk of {\bf x} in one of
-its components, and the other chunk of {\bf x} in the other component.
-These two chunks are now sent to our two worker nodes:
+非常肯定的是，我们的列表{\bf xparts}有在其一个元素中有{\bf x}的一块，
+而另一个元素中有{\bf x}的另一块。
+之后这两块被传输到两个工作节点上：
 
 \begin{lstlisting}
 > tmp <- clusterApply(cls,xparts,sum)
@@ -429,10 +428,8 @@ These two chunks are now sent to our two worker nodes:
 [1] 41
 \end{lstlisting}
 
-Again, {\bf clusterApply()}, like most {\bf snow} functions, returns its
-results in an R list, which we've assigned to {\bf tmp}.  The contents
-of the latter are
-
+同样像{\bf snow}中的其他函数一样，{\bf clusterApply()}会以列表的
+形式返回结果。这里我们将结果赋值给了{\bf tmp}。其内容如下
 \begin{lstlisting}
 > tmp
 [[1]]
@@ -441,26 +438,24 @@ of the latter are
 [[2]]
 [1] 41
 \end{lstlisting}
+也就是{\bf x}每一小块的和。
 
-i.e. the sum of each chunk of {\bf x}.
-
-To get the grand total, we can't merely call R's {\bf sum()} function on
-{\bf tmp}:
+为了得到最后的结果，我们不能简单地在{\bf tmp}上使用 R 中{\bf sum()}函数：
 
 \begin{lstlisting}
 > sum(tmp)
 Error in sum(tmp) : invalid 'type' (list) of argument
 \end{lstlisting}
 
-This is because {\bf sum()} works on vectors, not lists.  So, we just
-wrote a loop to add everything together:
+这是因为{\bf sum()}接受的是向量，而不是列表。
+所以我们自己写一个循环来把结果加起来：
 
 \begin{lstlisting}
 tot <- 0
 for (i in 1:length(tmp)) tot <- tot + tmp[[i]]
 \end{lstlisting}
 
-Note that we need double brackets to access list elements.
+需要注意的一点事，我们使用\texttt{[[]]}来获取列表中的元素。
 
 We can improve the code a little by replacing the above loop code by a
 call to R's {\bf Reduce()} function, which works like the reduction
@@ -509,11 +504,10 @@ matrices into one:
 The {\bf rbind()} functions has two operands, but in the situation above
 we have three.  Calling {\bf Reduce()} solves that problem.
 
-\subsection{Example:  Inversion of Block-Diagonal Matrices}
+\subsection{示例：对角分块矩阵求逆}
 \label{blkd}
 
-Suppose we have a block-diagonal matrix, such as
-
+假设我们有一个对角分块矩阵，比如
 $$
 \left (
    \begin{array}{cccc}
@@ -524,8 +518,6 @@ $$
    \end{array}
 \right )
 $$
-
-\noindent
 and we wish to find its inverse.  This is an embarrassingly parallel
 problem:  If we have two processes, we simply have one process invert that
 first 2x2 submatrix, have the second process invert the second 2x2
@@ -1824,21 +1816,19 @@ Starting program: /usr/lib/R/bin/exec/R
 
 \section{本书中的其它 R 语言示例}
 
-See these examples (some nonparallel):
+见下列章节中的示例（一些是非并行的）：
 
-in Sections \ref{ompjacobi}, \ref{onedimdft} (nonparallel)
-and \ref{smoothing} (nonparallel).
+\ref{ompjacobi}节、\ref{onedimdft}节（非并行）和\ref{smoothing}节（非并行）。
 
 \begin{itemize}
 
-\item Parallel Jacobi iteration of linear equations, Section \ref{ompjacobi}.
+\item 线性等式的并行 Jacobi 迭代，\ref{ompjacobi}节。
 
-\item Matrix computation of 1-D FFT, Section \ref{onedimdft} (can
-paralleliza using parallel matrix multiplication).
+\item 1维 FFT 的矩阵运算，\ref{onedimdft}节（可以通过并行的矩阵相乘来并行化）。
 
-\item Parallel computation of 2-D FFT, Section \ref{rfft}.
+\item 2维 FFT 的并行计算，\ref{rfft}节。
 
-\item Image smoothing, Section \ref{smoothing}.
+\item 图像平滑，\ref{smoothing}节。
 
 \end{itemize}
 
