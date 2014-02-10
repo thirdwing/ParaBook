@@ -455,27 +455,26 @@ tot <- 0
 for (i in 1:length(tmp)) tot <- tot + tmp[[i]]
 \end{lstlisting}
 
-需要注意的一点事，我们使用\texttt{[[]]}来获取列表中的元素。
+需要注意的一点是，我们使用\texttt{[[]]}来获取列表中的元素。
 
-We can improve the code a little by replacing the above loop code by a
-call to R's {\bf Reduce()} function, which works like the reduction
-operators we saw in Sections \ref{ompreduction} and \ref{mpireduction}.
-(Note, though, that this is a serial operation here, not parallel.)
-It takes the form {\bf Reduce(f,y)} for a function {\bf f()} and a list
-{\bf y}, and essentially does
-
+我可以通过调用 R 中的{\bf Reduce()}函数来取代上面的循环，
+从而对代码进行优化。{\bf Reduce()}很像\ref{ompreduction}节
+和\ref{mpireduction}节中的 reduction 操作。（注意，这里是个串行
+操作，不是并行。）一般以{\bf Reduce(f,y)}这种形式使用，
+它对函数{\bf f()}和列表{\bf y}进行如下操作
 \begin{lstlisting}
 z <- y[1]
 for (i in 2:length(y)) z <- f(z,y[i])
 \end{lstlisting}
 
-Using {\bf Reduce()} makes for more compact, readable code, and in some
-cases may speed up execution (not an issue here, since we'll have only a
-few items to sum).  Moreover, {\bf Reduce()} changes {\bf tmp} from an R
-list to a vector for us, solving the problem we had above when we tried
-to apply {\bf sum()} to {\bf tmp} directly.
+使用{\bf Reduce()}可以使代码更紧凑可读，
+一些情况下还会提高执行效率（我们这里只有很少的
+项目进行相加，暂时还不用考虑效率）。
+而且，{\bf Reduce()}会将{\bf tmp}从一个列表转换为
+向量，这就解决了我们直接对{\bf tmp}使用{\bf sum()}时
+的问题。
 
-Here's the new code:
+下面是新的代码：
 
 \begin{lstlisting}[numbers=left]
 parsum <- function(cls,x) {
