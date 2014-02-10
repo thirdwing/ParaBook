@@ -1,28 +1,29 @@
-\chapter{R Quick Start}
+\chapter{R 语言快速入门}
 \label{chap:rquickstart}
 
-Here we present a quick introduction to the R data/statistical
-programming language.  Further learning resources are listed at
-\url{http://heather.cs.ucdavis.edu/~/matloff/r.html}.
+这里我们提供了一个 R 语言的快速入门，进一步的
+学习资料可以在
+\url{http://heather.cs.ucdavis.edu/~/matloff/r.html}找到。
 
-R syntax is similar to that of C. It is object-oriented (in the sense of
-encapsulation, polymorphism and everything being an object) and is a
-functional language (i.e. almost no side effects, every action is a
-function call, etc.).
+R 的语法和 C 很类似。R既是面向对象的（从封装、多态和所有一切都是对象
+的角度来说），R 又是一门函数式语言（比如几乎没有副作用\footnote{
+译者注：函数的副作用指当调用函数时，除了返回函数值之外，
+还对主调用函数产生附加的影响，例如修改全局变量（函数外的变量）或修改参数}，每个操作都是一个
+函数调用等）。
 
 \section{Correspondences}
 
 \begin{tabular}{|l|l|l|}
 \hline
-aspect & C/C++ & R \\ \hline 
+aspect & C/C++ & R \\ \hline
 \hline
-assignment & = & \verb#<-# (or =) \\ \hline 
-array terminology & array & vector, matrix, array \\ \hline 
+assignment & = & \verb#<-# (or =) \\ \hline
+array terminology & array & vector, matrix, array \\ \hline
 subscripts & start at 0 & start at 1 \\ \hline
-array notation & m[2][3] & m[2,3] \\ \hline 
-2-D array storage & row-major order & column-major order \\ \hline 
+array notation & m[2][3] & m[2,3] \\ \hline
+2-D array storage & row-major order & column-major order \\ \hline
 mixed container &struct, members accessed by . & list, members acessed by
-\$ or [[ ]] \\ \hline 
+\$ or [[ ]] \\ \hline
 return mechanism & return & return() or last value computed \\ \hline
 primitive types & int, float, double, char, bool & integer, float,
 double, character, logical \\ \hline
@@ -34,7 +35,7 @@ run method & batch & interactive, batch \\ \hline
 \section{Starting R}
 
 To invoke R, just type ``R'' into a terminal window. On a Windows
-machine, you probably have an R icon to click.  
+machine, you probably have an R icon to click.
 
 If you prefer to run from an IDE, you may wish to consider ESS for
 Emacs, StatET for Eclipse or RStudio, all open source.  ESS is the
@@ -42,7 +43,7 @@ favorite among the ``hard core coder'' types, while the colorful,
 easy-to-use, RStudio is a big general crowd pleaser.  If you are already
 an Eclipse user, StatET will be just what you need.
 
-R is normally run in interactive mode, with $>$ as the prompt.  Among 
+R is normally run in interactive mode, with $>$ as the prompt.  Among
 other things, that makes it easy to try little experiments to learn
 from; remember my slogan, ``When in doubt, try it out!''
 
@@ -85,7 +86,7 @@ You can download the file, and copy/paste the text from there.}
 > # what kind of object is oddcount (well, we already know)?
 > class(oddcount)
 [1] "function"
-> # while in interactive mode, and not inside a function, can print 
+> # while in interactive mode, and not inside a function, can print
 > # any object by typing its name; otherwise use print(), e.g. print(x+y)
 > oddcount  # a function is an object, so can print it
 function(x)  {
@@ -165,7 +166,7 @@ $numodds
 [1] 2
 
 > ocy <- oddcount(y)  # save the output in ocy, which will be a list
-> ocy  
+> ocy
 $odds
 [1]  5 13
 
@@ -190,7 +191,7 @@ oddcount <- function(x)  {
    return(list(odds=x1, numodds=length(x1)))
 }
 \end{lstlisting}
-  
+
 We created some code, and then used {\bf function()} to create a function
 object, which we assigned to {\bf oddcount}.
 
@@ -203,11 +204,11 @@ large increase in speed.  For example:
 \begin{lstlisting}[numbers=left]
 > x <- runif(1000000)  # 1000000 random numbers from the interval (0,1)
 > system.time(sum(x))
-   user  system elapsed 
-  0.008   0.000   0.006 
+   user  system elapsed
+  0.008   0.000   0.006
 > system.time({s <- 0; for (i in 1:1000000) s <- s + x[i]})
-   user  system elapsed 
-  2.776   0.004   2.859 
+   user  system elapsed
+  2.776   0.004   2.859
 \end{lstlisting}
 
 \section{Second Sample Programming Session}
@@ -229,7 +230,7 @@ the numbers of rows and columns.
 [3,]    6   -1
 
 > # form matrix from 1,2,3,4,5,6, in 2 rows; R uses column-major storage
-> m2 <- matrix(1:6,nrow=2)  
+> m2 <- matrix(1:6,nrow=2)
 > m2
      [,1] [,2] [,3]
 [1,]    1    3    5
@@ -260,7 +261,7 @@ the numbers of rows and columns.
 [1,]   11   17
 [2,]   47   73
 
-> # matrices are special cases of vectors, so can treat them as vectors 
+> # matrices are special cases of vectors, so can treat them as vectors
 > sum(m1)
 [1] 16
 > ifelse(m2 %%3 == 1,0,m2) # (see below)
@@ -275,13 +276,13 @@ even though the result may be.  Here's why:
 In R, scalars don't really exist; they are just one-element vectors.
 However, R usually uses {\bf recycling}, i.e. replication, to make
 vector sizes match.  In the example above in which we evaluated the
-express \verb^2.5 * m3^, the number 2.5 was recycled to the matrix 
+express \verb^2.5 * m3^, the number 2.5 was recycled to the matrix
 
 \begin{equation}
 \left (
 \begin{array}{rr}
 2.5 & 2.5 \\
-2.5 & 2.5 
+2.5 & 2.5
 \end{array}
 \right )
 \end{equation}
@@ -427,7 +428,7 @@ course, you can use it with functions you write yourself too.
 Continuing the above example:
 
 \begin{lstlisting}
-> Reduce(c,x)  
+> Reduce(c,x)
 [1] 4 5 6 1 6 8
 \end{lstlisting}
 
@@ -458,13 +459,13 @@ We can write class {\it generic functions}:
 +    cat("union member",wrkr$union,"\n")
 + }
 > print(j)
-Joe 
-salary 55000 
-union member TRUE 
+Joe
+salary 55000
+union member TRUE
 > j
-Joe 
-salary 55000 
-union member TRUE 
+Joe
+salary 55000
+union member TRUE
 \end{lstlisting}
 
 What just happened?  Well, {\bf print()} in R is a {\it generic}
@@ -554,9 +555,9 @@ List of 2
 > names(z$b)
 [1] "u" "v"
 > summary(z)
-  Length Class  Mode   
+  Length Class  Mode
 a 50     -none- numeric
-b  2     -none- list   
+b  2     -none- list
 \end{lstlisting}
 
 \section{Data Frames}
@@ -582,7 +583,7 @@ operations, such as filtering.
 
 Here is an example using the dataset {\bf airquality}, built in to R for
 illustration purposes.  You can learn about the data through R's online
-help, i.e. 
+help, i.e.
 
 \begin{lstlisting}
 > ?airquality
@@ -592,7 +593,7 @@ Let's try a few operations:
 
 \begin{lstlisting}
 > names(airquality)
-[1] "Ozone"   "Solar.R" "Wind"    "Temp"    "Month"   "Day"    
+[1] "Ozone"   "Solar.R" "Wind"    "Temp"    "Month"   "Day"
 > head(airquality)  # look at the first few rows
   Ozone Solar.R Wind Temp Month Day
 1    41     190  7.4   67     5   1
@@ -642,7 +643,7 @@ directory:
 
 \begin{lstlisting}
 pr2file
-function (filename) 
+function (filename)
 {
     origdev <- dev.cur()
     parts <- strsplit(filename, ".", fixed = TRUE)
@@ -673,7 +674,7 @@ file of type either PDF, PNG or JPEG, implied by the file name you give.
 There are tons of resources for R on the Web.  You may wish to start
 with the links at \url{http://heather.cs.ucdavis.edu/~matloff/r.html}.
 
-\section{Online Help} 
+\section{Online Help}
 
 R's {\bf help()} function, which can be invoked also with a
 question mark, gives short descriptions of the R functions. For
@@ -682,7 +683,7 @@ example, typing
 \begin{Verbatim}[fontsize=\relsize{-2}]
 > ?rep
 \end{Verbatim}
-  
+
 will give you a description of R's {\bf rep()} function.
 
 An especially nice feature of R is its {\bf example()} function, which
@@ -692,7 +693,7 @@ instance, typing
 \begin{lstlisting}
 > example(wireframe())
 \end{lstlisting}
-  
+
 will show examples---R code and resulting pictures---of {\bf wireframe()},
 one of R's 3-dimensional graphics functions.
 
