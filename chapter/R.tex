@@ -578,7 +578,7 @@ getrng <- function(blkszs) {
 由于我们只有一个2$\times$2和一个3$\times$3的块，分块的大小就是2和3，
 因为在函数调用里使用{\bf c(2,3)}。
 
-The use of {\bf clusterApply()} here is similar to our earlier one.  The
+这里{\bf clusterApply()}的使用和早先的例子很相似。The
 main point in the code is to keep track of the positions of the blocks
 within the big matrix.  To that end, we wrote {\bf getrng()}, which
 returns the starting and ending row numbers for the various blocks.  we
@@ -721,66 +721,6 @@ order of these numbers.  If for instance the third number is the
 This amounts to finding a random permutation of the row numbers of {\bf
 m}.
 
-% \subsection{Example:  Doing a Scatter Operation}
-%
-% A common operation in message-passing parallel systems is {\bf
-% scatter/gather} (Section \ref{scattergather}).  Actually, {\bf snow} is
-% fundamentally a scatter/gather-based package, but the operation itself
-% may take some doing.  Here's how we could set this up for matrices in
-% {\bf snow}.
-%
-% Recall that {\bf clusterApply()} requires an R list as its first
-% argument.  So, if for instance we wish to scatter the rows of a matrix,
-% we'll need to first construct a list whose elements are those rows.
-%
-% Here's the code to do this:
-%
-% \begin{lstlisting}[numbers=left]
-% # returns a list of the matrix m's rows (rowcol=1) or columns
-% mat2lst <- function(m,rowcol=1) {
-%    if (rowcol == 1) m <- t(m)
-%    dm <- as.data.frame(m)
-%    lapply(dm,function(col) col)
-% }
-% \end{lstlisting}
-%
-% Note the line
-%
-% \begin{lstlisting}
-% lapply(dm,function(col) col)
-% \end{lstlisting}
-%
-% The second argument in \lstinline{lapply()} needs to be a function.  It
-% could be the name of a function, or a function defined ``on the spot''
-% (like {\it anonymous} functions in, say, Python), as is the case here.
-%
-% On the R-help online discussion list, Petr Pikal suggested this
-% approach:
-%
-% \begin{lstlisting}[numbers=left]
-% # returns a list of the matrix m's rows
-% mat2lst <- function(m) {
-%    split(m, 1:nrow(m))
-% }
-% \end{lstlisting}
-%
-% This works because (a) an R matrix is actually a vector, store in
-% row-major order and (b) in R a shorter vector is recycled to the length
-% of the longer vector.
-%
-% This second approach seems to work faster for rows, as no transpose
-% operation is done.
-%
-% Calling {\bf clusterApply()} with {\bf mrows}, the output of {\bf
-% mat2lst(),} above would scatter the rows of the matrix to the various
-% workers.  By the way, the workers may also need to know {\it which} rows
-% they are given.  We could arrange that by appending a column to {\bf m}
-% before calling {\bf mat2lst()}:
-%
-% \begin{lstlisting}
-% m <- cbind(m,1:nrow(m))
-% \end{lstlisting}
-
 \subsection{Example:  Transforming an Adjacency Matrix}
 \label{snowadj}
 
@@ -901,7 +841,7 @@ the total number of threads.  In MPI, the corresponding functions are
 to have such functions (or such functionality) in {\bf snow}.  Here is
 code for that purpose:
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 # sets a list myinfo as a global variable in the worker nodes in the
 # cluster cls, with myinfo$id being the ID number of the worker and
 # myinfo$nwrkrs being the number of workers in the cluster; called from
@@ -964,12 +904,11 @@ asks each worker to evaluate the expression \textbf{myinfo\$id};
 {\bf clusterEvalQ()} then returns the results of evaluating the
 expression at each worker node.
 
-\subsection{Shutting Down a Cluster}
+\subsection{关闭集群}
 
-Don't forget to stop your clusters before exiting R, by calling
-{\bf stopCluster(clustername)}.
+退出 R 之前，不要忘记使用{\bf stopCluster(clustername)}来关闭集群。
 
-\section{The multicore Package}
+\section{multicore 扩展包}
 
 As the name implies, the {\bf multicore} package is used to exploit the
 power of multicore machines.  This might seem odd: Since {\bf snow} can
@@ -1078,136 +1017,6 @@ tgonchunk <- function(start,m1,chunksize) {
 }
 \end{lstlisting}
 
-% \section{Rmpi}
-% \label{rmpi}
-%
-% The {\bf Rmpi} package provides an interface from R to MPI.  (MPI is
-% covered in detail in Chapter \ref{chap:mpi}).  Its author is Hao Yu of
-% the University of Western Ontario.
-%
-% It is arguably the most versatile of the parallel R packages, as it
-% allows any node to communicate directly with any other node, without
-% passing through a ``middleman.''  (The latter is the manager program in
-% {\bf snow}, and the server in {\bf Rdsm}.)  This could enable major
-% reductions in communications costs, and thus major increases in speed.
-% Moreover, {\bf Rmpi} is more efficient in communication than is {\bf
-% snow}, for example.
-%
-% So, although many applications using {\bf Rmpi} could be done more
-% simply in {\bf snow}, the former can bring better performance.
-%
-% On the other hand, coding in {\bf Rmpi} generally requires more work
-% than for the other packages.  In addition, MPI is quite finicky, and
-% subtle errors in your setup may prevent it from running; that problem
-% may be compounded if you run R and MPI together.  (In online R
-% discussion groups, one of the most common types of queries concerns
-% getting {\bf Rmpi} to run.)
-%
-% {\bf Rmpi} will not be used in this book, but here is an overview of how
-% to use it:
-%
-% \subsection{Usage}
-%
-% Fire up MPI, and then from R load in {\bf Rmpi}, by typing
-%
-% \begin{lstlisting}
-% > library(Rmpi)
-% \end{lstlisting}
-%
-% Then start {\bf Rmpi}:
-%
-% \begin{lstlisting}
-% > mpi.spawn.Rslaves()
-% \end{lstlisting}
-%
-% On some systems, the call to {\bf mpi.spawn.Rslaves()} may encounter
-% problems.  An alternate method of launching the worker processes is to
-% copy the {\bf Rprofile} file in the {\bf Rmpi} distribution to {\bf
-% .Rprofile} in your home directory.  Then start R, say for two workers
-% and a manager, by running something like (for the LAM case)
-%
-% \begin{lstlisting}
-% mpirun -c 3 R --no-save -q
-% \end{lstlisting}
-%
-% This will start R on all machines in the group you started MPI on.
-%
-% \subsection{Available Functions}
-%
-% Most standard MPI functions are available, as well as many extras.
-% Here are just a few examples:
-%
-% \begin{itemize}
-%
-% \item {\bf mpi.comm.size():}
-%
-% Returns the number of MPI processes, including the master that spawned
-% the other processes.
-%
-% \item {\bf mpi.comm.rank():}
-%
-% Returns the rank of the process that executes it.
-%
-% \item {\bf mpi.send(), mpi.recv()}:
-%
-% The usual send/receive operations.
-%
-% \item {\bf mpi.bcast(), mpi.scatter(), mpi.gather():}
-%
-% The usual broadcast, scatter and gather operations.
-%
-% \end{itemize}
-
-
-
-% \subsection{Example:  Inversion of a Diagonal-Block Matrix}
-%
-% Below is the {\bf Rmpi} code, for general n x n matrices of the
-% block-diagonal form introduced in Section \ref{blkd}, but to keep this
-% introductory Rmpi example simple, we'll assume that there are only two
-% blocks, of the same size, with n/2 rows and n/2 columns, and with the
-% manager itself doing half the work:
-%
-% \begin{lstlisting}[numbers=left]
-% parinv <- function(blkdg) {
-%    n <- nrow(blkdg)
-%    k <- n/2  # block size
-%    # send the worker its task function
-%    mpi.bcast.Robj2slave(bkinv)
-%    # get worker started running its task
-%    mpi.bcast.cmd(bkinv())
-%    # send worker data to feed its task
-%    mpi.send.Robj(blkdg[(k+1):n,(k+1):n],dest=1,tag=1)
-%    # prepare output matrix
-%    outmat <- matrix(rep(0,n^2),nrow=n,ncol=n)
-%    # manager does its task
-%    outmat[1:k,1:k] <- solve(blkdg[1:k,1:k])
-%    # receive result from worker and place in output matrix
-%    outmat[(k+1):n,(k+1):n] <-
-%       mpi.recv.Robj(source=1,tag=2)
-%    return(outmat)
-% }
-%
-% # function for worker to execute
-% bkinv <- function() {
-%    # receive data from manager
-%    blk <- mpi.recv.Robj(source=0,tag=1)
-%    # invert matrix and send back to manager
-%    mpi.send.Robj(solve(blk),dest=0,tag=2)
-% }
-%
-% test <- function() {
-%    nb <- 800
-%    nb1 <- nb+1
-%    nbx2 <- 2*nb
-%    blk <- matrix(runif(nb^2),nrow=nb)
-%    mat <- matrix(rep(0,nbx2^2),nrow=nbx2)
-%    mat[1:nb,1:nb] <- blk
-%    mat[nb1:nbx2,nb1:nbx2] <- blk
-%    print(system.time(parinv(mat)))
-%    print(system.time(solve(mat)))
-% }
-% \end{lstlisting}
 
 \section{Rdsm}
 
@@ -1370,7 +1179,7 @@ webprobe <- function(sitefile,ww) {
 }
 \end{lstlisting}
 
-\subsection{The bigmemory Package}
+\subsection{bigmemory 扩展包}
 \label{bigmemory}
 
 Jay Emerson and Mike Kane developed the {\bf bigmemory} package when I
@@ -1473,21 +1282,18 @@ missing, then $a^{-1}$ will be returned.
 \subsection{rgpu 扩展包}
 \label{rgpu}
 
-In installing {\bf rgpu}\footnote{译者注：rgpu 扩展包的安装请参考
-本人博客\url{thirdwing.github.io}}, I downloaded the source code from
-\url{https://gforge.nbic.nl/frs/?group_id=38} and unpacked as above.
-I then changed the file {\bf Makefile}, with the modified lines being
-
+为了安装{\bf rgpu}，我从
+\url{https://gforge.nbic.nl/frs/?group_id=38}下载源代码并解压缩。
+之后我修改了{\bf Makefile}文件中的几行
+\footnote{译者注：请根据自己机器上的相应路径进行修改}
 \begin{lstlisting}
 LIBS = -L/usr/lib/nvidia -lcuda -lcudart -lcublas
 CUDA_INC_PATH = /home/matloff/NVIDIA_GPU_Computing_SDK/C/common/inc
 R_INC_PATH = /usr/include/R
 \end{lstlisting}
 
-The first line was needed to pick up {\bf -lcuda}, as with {\bf
-gputools}.  The second line was needed to acquire the file {\bf cutil.h}
-in the NVIDIA SDK, which I had installed earlier at the location see
-above.
+第一行是为了让系统找到{\bf -lcuda}，这点和{\bf gputools}一样。
+第二行是为了 NVIDIA SDK 中的{\bf cutil.h}文件，上面的是我的安装路径。
 
 For the third line, I made a file {\bf z.c} consisting solely of the
 line
@@ -1515,7 +1321,7 @@ matrix {\bf m}, plus itself:
 > m2m <- evalgpu(m %*% m + m)
 \end{lstlisting}
 
-\section{Parallelism Via Calling C from R}
+\section{通过在 R 中调用 C 进行并行}
 \label{cfromr}
 
 Parallel R aims to be faster than ordinary R.  But even if that aim is
@@ -1531,7 +1337,7 @@ written in R.  You may find that placing the parallelism in the C
 portion of your code is good enough, while retaining the convenience of
 R for the rest of your code.
 
-\subsection{Calling C from R}
+\subsection{在 R 中调用 C}
 
 In C, two-dimensional arrays are stored in row-major order, in contrast
 to R's column-major order.   For instance, if we have a 3x4 array, the
@@ -1574,7 +1380,7 @@ void subdiag(double *m, int *n, int *k, double *result)
 For convenience, you can compile this by rubnning R in a terminal
 window, which will invoke GCC:
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 % R CMD SHLIB sd.c
 gcc -std=gnu99 -I/usr/share/R/include      -fpic  -g -O2 -c sd.c -o sd.o
 gcc -std=gnu99 -shared  -o sd.so sd.o   -L/usr/lib/R/lib -lR
@@ -1588,7 +1394,7 @@ executable program.  (On Windows this would presumably be a {\bf .dll}
 file.)  So, how is it executed?  The answer is that it is loaded into R,
 using R's {\bf dyn.load()} function.  Here is an example:
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 > dyn.load("sd.so")
 > m <- rbind(1:5, 6:10, 11:15, 16:20, 21:25)
 > k <- 2
@@ -1791,7 +1597,7 @@ not, you may have to resort to using {\bf cat()} to write to a file.
 {\bf Rdsm} allows full debugging, as there is a separate terminal window
 for each process.
 
-\subsection{Debugging C Called from R}
+\subsection{调试 R 所调用的 C 代码}
 
 For parallel R that is implemented via R calls to C code, producing a
 dynamically-loaded library as in Section \ref{cfromr}, debugging is a
