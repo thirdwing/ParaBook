@@ -578,9 +578,9 @@ getrng <- function(blkszs) {
 由于我们只有一个2$\times$2和一个3$\times$3的块，分块的大小就是2和3，
 因为在函数调用里使用{\bf c(2,3)}。
 
-这里{\bf clusterApply()}的使用和早先的例子很相似。The
-main point in the code is to keep track of the positions of the blocks
-within the big matrix.  To that end, we wrote {\bf getrng()}, which
+这里{\bf clusterApply()}的使用和早先的例子很相似。
+代码中值得注意的地方是我们需要保存每一块在大矩阵
+中的位置。最后我们写了一个{\bf getrng()}函数, which
 returns the starting and ending row numbers for the various blocks.  we
 use that to set up the argument {\bf dg} to be fed into {\bf
 clusterApply()}:
