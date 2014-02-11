@@ -484,12 +484,12 @@ parsum <- function(cls,x) {
 }
 \end{lstlisting}
 
-Note that in R, absent an explcit {\bf return()} call, the last value
-computed is returned, in this case the value produced by {\bf Reduce()}.
+需要说明的是，在 R 中，如果没有显式的{\bf return()}语句，
+那最后求得的值会被作为返回值，这里是{\bf Reduce()}的计算结果。
 
-{\bf Reduce()} is a very handy function in R in general, and with {\bf
-snow} in particular.  Here's an example in which we combine several
-matrices into one:
+{\bf Reduce()}是一个非常便利的函数，
+特别是在和{\bf snow}一起使用时。
+这里有一个我们把多个矩阵进行合并的示例：
 
 \begin{lstlisting}
 > Reduce(rbind,list(matrix(5:8,nrow=2),3:4,c(-1,1)))
@@ -500,8 +500,8 @@ matrices into one:
 [4,]   -1    1
 \end{lstlisting}
 
-The {\bf rbind()} functions has two operands, but in the situation above
-we have three.  Calling {\bf Reduce()} solves that problem.
+{\bf rbind()}函数只有两个参数，在这里我们有三个。
+通过使用{\bf Reduce()}可以解决这个问题。
 
 \subsection{示例：对角分块矩阵求逆}
 \label{blkd}
@@ -517,18 +517,17 @@ $$
    \end{array}
 \right )
 $$
-and we wish to find its inverse.  This is an embarrassingly parallel
-problem:  If we have two processes, we simply have one process invert that
-first 2x2 submatrix, have the second process invert the second 2x2
-submatrix, and we then place the inverses back in the same diagonal
-positions.
+我们想对其求逆。这是个易并行问题：假如我们有两个处理器，
+我们可以很简单地让其中之一对第一个2$\times$2子矩阵求逆，
+让另一个对第二个2$\times$2子矩阵求逆，之后我们将两个逆矩阵放回
+原来的位置。
 
-Communication costs might not be too bad here, since inversion of an nxn
-matrix takes $O(n^3)$ time while communication is only $O(n^2)$.
+通讯的开销在这里不是很大，一个 n$\times$n 矩阵求逆的时间复杂度为$O(n^3)$，
+而通讯只有$O(n^2)$。
 
-Here we'll discuss {\bf snow} code for inverting block-diagonal matrices.
+现在我们讨论一下用于分块对角矩阵求逆的{\bf snow}代码。
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 # invert a block diagonal matrix m, whose sizes are given in szs;
 # return value is the inverted matrix
 bdiaginv <- function(cls,m,szs) {
@@ -556,7 +555,7 @@ getrng <- function(blkszs) {
 }
 \end{lstlisting}
 
-Let's test it:
+我们来检测一下：
 
 \begin{lstlisting}
 > m
@@ -575,9 +574,9 @@ Let's test it:
 [5,]  0.000000  0.0000000    2   -1    0
 \end{lstlisting}
 
-Note the {\bf szs} argument here, which contains the sizes of the
-blocks.  Since we had one 2x2 block and a 3x3 one, the sizes were 2 and
-3, hence the {\bf c(2,3)} argument in our call.
+这里的{\bf szs}参数，包含了分块的大小。
+由于我们只有一个2$\times$2和一个3$\times$3的块，分块的大小就是2和3，
+因为在函数调用里使用{\bf c(2,3)}。
 
 The use of {\bf clusterApply()} here is similar to our earlier one.  The
 main point in the code is to keep track of the positions of the blocks
@@ -1394,7 +1393,7 @@ is very efficient.
 Using {\bf bigmemory} variables in {\bf Rdsm} is quite simple:  Instead
 of calling {\bf cnewdsm()} to create a shared variable, call {\bf newbm()}.
 
-\section{R with GPUs}
+\section{R 和 GPU}
 
 The blinding speed of GPUs (for certain problems) is sure to of interest
 to more and more R users in the coming years.
@@ -1409,7 +1408,7 @@ with R, {\bf gputools} and {\bf rgpu}.  Both deal mainly with linear
 algebra operations.  The remainder of this section will deal with these
 packages.
 
-\subsection{Installation}
+\subsection{安装}
 \label{gpuinstall}
 
 Note that, due to issues involving linking to the CUDA libraries, in
@@ -1437,7 +1436,7 @@ R CMD INSTALL -l /a/b/c x
 
 Details will be shown in the following sections.
 
-\subsection{The gputools Package}
+\subsection{gputools 扩展包}
 
 In installing {\bf gputools}, I downloaded the source from the CRAN R
 repository site, and unpacked as above.  I then removed the subcommand
@@ -1471,17 +1470,18 @@ The {\bf gpuSolve()} function works like the R {\bf solve()}.  The call
 square matrix {\bf a} and vector {\bf b}.  If the second argument is
 missing, then $a^{-1}$ will be returned.
 
-\subsection{The rgpu Package}
+\subsection{rgpu 扩展包}
 \label{rgpu}
 
-In installing {\bf rgpu}, I downloaded the source code from
+In installing {\bf rgpu}\footnote{译者注：rgpu 扩展包的安装请参考
+本人博客\url{thirdwing.github.io}}, I downloaded the source code from
 \url{https://gforge.nbic.nl/frs/?group_id=38} and unpacked as above.
 I then changed the file {\bf Makefile}, with the modified lines being
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 LIBS = -L/usr/lib/nvidia -lcuda -lcudart -lcublas
-CUDA_INC_PATH ?= /home/matloff/NVIDIA_GPU_Computing_SDK/C/common/inc
-R_INC_PATH ?= /usr/include/R
+CUDA_INC_PATH = /home/matloff/NVIDIA_GPU_Computing_SDK/C/common/inc
+R_INC_PATH = /usr/include/R
 \end{lstlisting}
 
 The first line was needed to pick up {\bf -lcuda}, as with {\bf
