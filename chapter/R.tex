@@ -580,8 +580,8 @@ getrng <- function(blkszs) {
 
 这里{\bf clusterApply()}的使用和早先的例子很相似。
 代码中值得注意的地方是我们需要保存每一块在大矩阵
-中的位置。最后我们写了一个{\bf getrng()}函数, which
-returns the starting and ending row numbers for the various blocks.  we
+中的位置。最后我们写了一个{\bf getrng()}函数，用于返回
+不同块的起始和结束的行数 we
 use that to set up the argument {\bf dg} to be fed into {\bf
 clusterApply()}:
 
@@ -594,7 +594,7 @@ for (i in 1:nb) {
 Keep in mind that the expression {\bf m[rng,rng]} extracts a subset
 of the rows and columns of {\bf m}, in this case the i$^{th}$ block.
 
-\subsection{Example:  Mutual Outlinks}
+\subsection{示例：Mutual Outlink}
 \label{rmutlinks}
 
 Consider the example of Section \ref{mutlinks}.  We have
