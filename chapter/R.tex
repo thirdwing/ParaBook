@@ -645,7 +645,7 @@ clusterSplit(cls,1:nrow(m))
 但这会有一个在\ref{mutlinks}节中讨论过的不均衡问题。
 比如我们有两个工作节点和100行。
 如果我们像上一节一样使用{\bf clusterSplit()}，
-第一个节点进行的比较工作会远比第二个节点多。 
+第一个节点进行的比较工作会远比第二个节点多。
 
 一个解决方案是在调用{\bf clusterSplit()}之前，
 将行号随机打乱。另一方法，也是我们上面的代码中使用的，
@@ -683,43 +683,38 @@ counts <- clusterApply(cls,ichunks,mtl,m)
 \end{lstlisting}
 就可以在两个工作节点间实现一个负载均衡了。
 
-Note that the call needed includ {\bf m} as an argument (which becomes
-an argument to {\bf mtl()}).  Otherwise the workers would have no {\bf
-m} to work it.  One alternative would have been to use {\bf
-clusterExport()} to ship {\bf m} to the workers, at which it then would
-be a global variable accessible by {\bf mtl()}.
+注意这个调用需要将{\bf m}作为一个参数（作为函数{\bf mtl()}的参数）。
+否则工作节点将没有可供使用的{\bf m}。
+另一个选择是使用{\bf clusterExport()}来
+将{\bf m}发送到工作节点，之后作为一个全局变量供{\bf mtl()}使用。
 
-By the way, the calls to {\bf options()} tell R not to warn us that it
-did recycling.  It doesn't usually do so, but it will for {\bf split()}.
+另外，调用{\bf options()}是为了让 R 在我们做``循环''时不
+发出警告。一般我们并不这么做，但这里为了使用{\bf split()}的需要。
 
-Then to get the grand total from the output list of individual sums, we
-could have used {\bf Reduce()} again, but for variety utilized R's {\bf
-do.call()} function.  That function does exactly what its name implies:
-It will extract the elements of the list {\bf counts}, and then plug
-them as arguments into {\bf sum()}!  (In general, {\bf do.call()} is
-useful when we wish to call a certain function on a set of arguments
-whose number won't be known until run time.)
+之后，为了得到输出的列表中各个元素的总和，我们可以再次使用{\bf Reduce()}，
+但由于 R 的多样性，我们也可以使用{\bf do.call()}函数。
+这个函数的动能正如其函数名暗示的：
+它会把列表{\bf counts}中的每个元素抽出，之后作为参数传递给{\bf sum()}！
+（一般来说，当我们需要调用一个特定的函数，但其参数的数目直到
+运行时才可以确定时，{\bf do.call()}是非常有用的。）
 
-As noted, instead of {\bf split()}, we could have randomized the rows:
+正如前面所说的，除了使用{\bf split()}，我们可以将行数随机打乱：
 
 \begin{lstlisting}
 tmp <- clusterSplit(cls,order(runif(nrow(m))))
 \end{lstlisting}
 
-This generates a random number in (0,1) for each row, then finds the
-order of these numbers.  If for instance the third number is the
-20$^{th}$-smallest, element 3 of the output of {\bf order()} will be 20.
-This amounts to finding a random permutation of the row numbers of {\bf
-m}.
+这会为每一行产生一个(0,1)之间的随机数，之后按此排序。
+比如说，如果第三个随机数是第20小的，第三个元素在{\bf order()}的输出中会是20。
+这可以找到矩阵{\bf m}行号的一个随机排列。
 
-\subsection{Example:  Transforming an Adjacency Matrix}
+\subsection{示例：邻接矩阵变换}
 \label{snowadj}
 
-Here is a {\bf snow} version of the code in Section \ref{transgraph}.
-To review, here is the problem:
+这是\ref{transgraph}节中代码的{\bf snow}版本。
+回忆一下，问题如下：
 
-Say we have a graph with adjacency matrix
-
+假如我们有一个图的邻接矩阵
 \begin{equation}
 \left (
 \begin{array}{rrrr}
@@ -730,11 +725,9 @@ Say we have a graph with adjacency matrix
 \end{array}
 \right )
 \end{equation}
-
-with row and column numbering starting at 0, not 1.  We'd like to
-transform this to a two-column matrix that displays the links, in this
-case
-
+其中行号和列号从0开始，而不是1。
+我们想要将其转换为一个两列的矩阵用来展示连接数，
+如下所示
 \begin{equation}
 \left (
 \begin{array}{rr}
@@ -757,7 +750,7 @@ above.
 
 Here is code to do this computation in {\bf snow}:
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 tg <- function(cls,m) {
    n <- nrow(m)
    rowschunks <- clusterSplit(cls,1:n)  # make chunks of row numbers
@@ -823,7 +816,7 @@ at a time, and fill in the rows as we build the matrix.  Whenever we
 would use up all of a matrix, we would start a new one, and then return
 all the matrices in a list.
 
-\subsection{Example:  Setting Node IDs and Notification of Cluster Size}
+\subsection{示例：设置节点 ID 和集群规模提示}
 
 Recall that in OpenMP there are functions {\bf omp\_get\_thread\_num()}
 and {\bf omp\_get\_num\_threads()} that report a thread's ID number and
@@ -953,7 +946,7 @@ once per session and then repeatedly reused at each {\bf snow} function
 call, with {\bf multicore} the worker R processes are set up again from
 scratch each time a {\bf multicore} function is called.
 
-\subsection{示例：使用 multicore 进行邻接矩阵转置}
+\subsection{示例：使用 multicore 进行邻接矩阵转换}
 
 Same application as in Section \ref{snowadj}, and indeed the function
 {\bf tgonchunk()} below is just a modified version of what we had in the
@@ -969,7 +962,7 @@ applies the function {\bf tgonchunk()} to every element of the vector
 {\bf starts} (changed to an R list first), with {\bf m1} and {\bf
 chunksize} serving as additional arguments to {\bf mclapply()}.
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 # transgraph problem, R multicore version
 
 # arguments:
@@ -1055,7 +1048,7 @@ introduction to the package.
 Let's see how the block-diagonal matrix inversion example from Section
 \ref{blkd} can be handled in {\bf Rdsm}.
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 # invert a block diagonal matrix m, whose sizes are given in szs; here m
 # is either an Rdsm or bigmemory shared variable; no return
 # value--inversion is done in-place; it is assumed that there is one
@@ -1225,15 +1218,11 @@ alternative I recommend works as follows:
 
 \item 对{\bf x}中的文件进行修改。
 
-\item 之后运行
-
-\begin{lstlisting}
-R CMD INSTALL -l /a/b/c x
-\end{lstlisting}
+\item 之后运行 \texttt{R CMD INSTALL -l /a/b/c x}。
 
 \end{itemize}
 
-Details will be shown in the following sections.
+细节会在后面的章节中讨论。
 
 \subsection{gputools 扩展包}
 
