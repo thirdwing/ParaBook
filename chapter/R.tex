@@ -795,33 +795,28 @@ m1 <- cbind(1:n,m)  # prepend col of row numbers to m
 {\bf lapply()}会把一个特定函数作用到列表的每一个元素上。
 输出结果依然是个列表。
 
-In our case here, we need to feed the row chunks of {\bf m} into {\bf
-clusterApply()}, but the latter requires that we do that via a list.
-We could have done that using a {\bf for} loop, adding row chunks to a
-list one by one, but it is more compact to use {\bf lapply()}.
+在我们这里的例子中，我们需要将{\bf m}按行分块传递给{\bf clusterApply()}，
+但后者要求我们必须传递一个列表。
+我们可以通过一个{\bf for}来完成，一个一个地将分块添加进列表，
+但使用{\bf lapply()}可以更加紧凑。
 
-In the end, the manager node receives many parts of the new matrix,
-which must be combined.  It's natural to do that with the {\bf rbind()}
-function, but again we need to overcome the fact that the parts are
-packaged in an R list.  It's handy to use {\bf do.call()} again, though
-{\bf Reduce()} would have worked too.
+在最后，管理节点会接收新矩阵的很多部分，这些必须被整合起来。
+使用{\bf rbind()}函数是很自然的想法，但我们仍然需要客服各个部分
+是 R 列表的问题。尽管{\bf Reduce()}也可以完成，但用{\bf do.call()}会更趁手。
 
-Note carefully that although it's natural to use {\bf rbind()} as
-mentioned in the preceding paragraph, it's not efficient.  This is
-because each call to {\bf rbind()} causes a new matrix to be allocated,
-a time-consuming action.  It would be better to allocate, say, 50 rows
-at a time, and fill in the rows as we build the matrix.  Whenever we
-would use up all of a matrix, we would start a new one, and then return
-all the matrices in a list.
+需要注意的是，尽管在上一段中说使用{\bf rbind()}是很自然的，
+但效率很低。这是因为{\bf rbind()}会重新分配一个新的矩阵空间，
+这是个很浪费时间的操作。先分配50行空间，之后在构建矩阵时进行填充会是更好的选择。
+无论什么时候，我们用完了一个矩阵，我们都可以构建一个新的矩阵，
+之后把所有矩阵作为一个列表返回。
 
 \subsection{示例：设置节点 ID 和集群规模提示}
 
-Recall that in OpenMP there are functions {\bf omp\_get\_thread\_num()}
-and {\bf omp\_get\_num\_threads()} that report a thread's ID number and
-the total number of threads.  In MPI, the corresponding functions are
-{\bf MPI\_Comm\_rank()} and {\bf MPI\_Comm\_size()}.  It would be nice
-to have such functions (or such functionality) in {\bf snow}.  Here is
-code for that purpose:
+让我们回忆一下，在 OpenMP 中有两个函数，{\bf omp\_get\_thread\_num()}
+和{\bf omp\_get\_num\_threads()}，分别用来报告一个线程的 ID 和
+线程总数。在 MPI 中，对应的函数时{\bf MPI\_Comm\_rank()}和{\bf MPI\_Comm\_size()}。
+在{\bf snow}中如果能有这样的函数（或功能），将是非常好的事情。
+这里的代码就是用于这个目的：
 
 \begin{lstlisting}
 # sets a list myinfo as a global variable in the worker nodes in the
@@ -837,18 +832,17 @@ setmyinfo <- function(cls) {
 }
 \end{lstlisting}
 
-Yes, R does allow defining a function within a function.  Note by the
-way the use of the superassignment operator, \verb#<<-#, which assigns
-to the global level.
+是的，R 允许在函数中定义函数。顺便请注意超级赋值符\verb#<<-#的使用，
+这个用了在全局层面进行赋值操作。
 
-After this call, any code executed by a worker node can then determine
-its node number, e.g. in code such as
+调用这个函数后，任何在一个工作节点上运行的代码代码都
+可以决定其节点 ID，比如在下面这样的代码中
 
 \begin{lstlisting}
 if (myinfo$id == 1) ...
 \end{lstlisting}
 
-Or, we could send code from the manager to be executed on the workers:
+或者，我们也可以从管理节点传输代码到工作节点执行：
 
 \begin{lstlisting}
 > setmyinfo(cls)
@@ -875,16 +869,13 @@ Or, we could send code from the manager to be executed on the workers:
 [1] 2
 \end{lstlisting}
 
-In that first case, since {\bf clusterApply()} returns a value, it was
-printed out.  In the second case, the call
-
+第一个例子，由于{\bf clusterApply()}有返回值，都会被打印出来。
+第二个例子中，调用
 \begin{lstlisting}
 clusterEvalQ(cls,myinfo$id)
 \end{lstlisting}
-
-asks each worker to evaluate the expression \textbf{myinfo\$id};
-{\bf clusterEvalQ()} then returns the results of evaluating the
-expression at each worker node.
+会使每个工作节点对表达式\textbf{myinfo\$id}进行求值；
+之后{\bf clusterEvalQ()}返回在每个节点上的执行结果。
 
 \subsection{关闭集群}
 
