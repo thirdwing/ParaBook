@@ -743,12 +743,11 @@ tmp <- clusterSplit(cls,order(runif(nrow(m))))
 \right )
 \end{equation}
 
-For instance, there is a 1 on the far right, second row of the above
-matrix, meaning that in the graph there is an edge from vertex 1 to
-vertex 3.  This results in the row (1,3) in the transformed matrix seen
-above.
+比如说，在上面的邻接矩阵中，最右边的第二行有一个1，这意味
+着在顶点1和顶点3直接存在一条边。
+这个在转换后的矩阵中以(1,3)表示。
 
-Here is code to do this computation in {\bf snow}:
+下面是在{\bf snow}中进行该计算的代码：
 
 \begin{lstlisting}
 tg <- function(cls,m) {
@@ -783,19 +782,18 @@ tgonchunk <- function(rows) {
 }
 \end{lstlisting}
 
-What is new here?  First, since we desired the output matrix to be in
-lexicographical order, we needed a way to keep track of the original
-indices of the rows.  So, we added a column for those numbers to {\bf
-m}:
+这里有什么新东西么？
+首先，由于我们需要最后的输出按字典序排列，我们需要
+保存原有每行的索引。所以我们需要在{\bf m}中多添加一列：
 
 \begin{lstlisting}
 m1 <- cbind(1:n,m)  # prepend col of row numbers to m
 \end{lstlisting}
 
-Second, note the use of R's {\bf lapply()} function.  Just as {\bf
-apply()} calls a specified function on each row (or each column) of a
-matrix, {\bf lapply()} calls a specified function on each element of a
-list.  The output will also be a list.
+其次，注意{\bf lapply()}函数的使用。正如{\bf apply()}会
+把一个特定的函数作用到矩阵的每一行（或每一列）上，
+{\bf lapply()}会把一个特定函数作用到列表的每一个元素上。
+输出结果依然是个列表。
 
 In our case here, we need to feed the row chunks of {\bf m} into {\bf
 clusterApply()}, but the latter requires that we do that via a list.
