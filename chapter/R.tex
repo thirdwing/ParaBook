@@ -813,7 +813,8 @@ m1 <- cbind(1:n,m)  # prepend col of row numbers to m
 \subsection{示例：设置节点 ID 和集群规模提示}
 
 让我们回忆一下，在 OpenMP 中有两个函数，{\bf omp\_get\_thread\_num()}
-和{\bf omp\_get\_num\_threads()}，分别用来报告一个线程的 ID 和
+和\\
+{\bf omp\_get\_num\_threads()}，分别用来报告一个线程的 ID 和
 线程总数。在 MPI 中，对应的函数时{\bf MPI\_Comm\_rank()}和{\bf MPI\_Comm\_size()}。
 在{\bf snow}中如果能有这样的函数（或功能），将是非常好的事情。
 这里的代码就是用于这个目的：
@@ -883,23 +884,22 @@ clusterEvalQ(cls,myinfo$id)
 
 \section{multicore 扩展包}
 
-As the name implies, the {\bf multicore} package is used to exploit the
-power of multicore machines.  This might seem odd: Since {\bf snow} can
-be used on either a (physical) cluster of machines or on a multicore
-machine, while {\bf multicore} can only be used on the latter, one might
-wonder what, if anything, is to be gained by using {\bf multicore}.  The
-answer is that one might gain in performance, as will be explained.
+正如名字所暗示的，{\bf multicore}扩展包就是用于使用多核
+设备的计算能力的。这可能有点奇怪：
+既然{\bf snow}既可以用于一个（物理）集群，也可以
+用于一个多核设备，而{\bf multicore}只能在后者上使用，
+那用{\bf multicore}的优势哪儿？
+答案是性能上的提高，这个在后面会解释。
 
-The package's main function, {\bf mclapply()}, is similar in syntax to
-{\bf snow}'s {\bf clusterApply()}, and similarly parcels tasks out to
-the various worker nodes.
+这个扩展包的主函数是{\bf mclapply()}，其语法和
+{\bf snow}中的{\bf clusterApply()}很类似，
+也很类似地把任务分配给各个工作节点。
 
-The worker nodes here, though, are just different processes on the same
-machine.  Say for example you are running {\bf multicore} on a quad-core
-machine.  Calling {\bf mclapply()} will start (a default value of) 4 new
-invocations of R on your machine, each of which will work on a piece of
-your application in parallel.  Each invocation has exactly the same R
-variables set up as your original R process did before the call.  Thus
+这里所说的工作节点，指的是同一台机器上的不同处理器。
+比如说，在一个四核的机器上运行{\bf multicore}，
+调用{\bf mclapply()}会（默认）在你的机器上调用4个 R，
+并行地进行你的运算工作。其中每个 R 调用都使用和调用前的 R 一样的变量设置。
+Thus
 all the variables are shared initially (note that qualifier), and you as
 the programmer do not take any special action to transfer variables from
 the manager node to the worker nodes, quite a contrast to {\bf snow}.
