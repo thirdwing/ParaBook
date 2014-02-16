@@ -988,7 +988,7 @@ tgonchunk <- function(start,m1,chunksize) {
 
 
 无论你在一个 NOW 网络还是一个多核机器上，
-我的{\bf Rdsm}扩展包都可以做一个内存共享系统来使用。
+我的{\bf Rdsm}扩展包都可以作为一个多线程来使用。
 这是我在2002年开发的一个类似的 Perl 扩展包， PerlDSM\footnote{N.
 Matloff, PerlDSM: A Distributed Shared Memory System for Perl, {\it
 Proceedings of PDPTA 2002}, 2002, 63-68.}的扩展。
@@ -996,41 +996,34 @@ Proceedings of PDPTA 2002}, 2002, 63-68.}的扩展。
 
 \begin{itemize}
 
-\item It uses a shared-memory programming model, which as noted in
-Section \ref{sharedbetter}, is commonly considered in the parallel
-processing community to be clearer than messag-passing.
+\item 使用了一个内存共享的编程模型，正如在\ref{sharedbetter}节中所述，
+在并行编程社区中，一般认为这优于信息传递模型。
 
 \item 可以充分使用 R 的调试工具。
 
 \end{itemize}
 
-{\bf Rdsm} gives the R programmer a shared memory view, but the objects
-are not physically shared.  Instead, they are stored in a server and
-accessed through network sockets,\footnote{Or, {\bf Rdsm} can be used
-with the {\bf bigmemory} package, as seen in Section \ref{bigmemory}.}
-thus enabling a threads-like view for R programmers even on NOWs.  There
-is no manager/worker structure here.  All of the R processes execute the
-same code, as peers.
+{\bf Rdsm}给了 R 程序员一个内存共享的视角，但实际上这些对象并没有共享。
+对象被储存在一个服务器上，通过网络端口获取\footnote{{\bf Rdsm}也可以在
+{\bf bigmemory}扩展包中使用，见\ref{bigmemory}节。}，
+从而使 R 程序员即使在 NOW 网络上也可以有一个类似多线程的视角。
+这里没有管理/工作节点的结构，所有的 R 进场都执行相同的代码。
 
-Shared objects in {\bf Rdsm} can be numerical vectors or matrices, via
-the classes {\bf dsmv} and {\bf dsmm}, or R lists, using the class {\bf
-dsml}.  Communication with the server in the vector and matrix cases is
-done in binary form for efficiency, while serialization is used for
-lists.  There is as a built-in variable {\bf myinfo} that gives a
-process' ID number and the total number of processes, analogous to the
-information obtained in {\bf Rmpi} from the functions {\bf
-mpi.comm.rank()} and {\bf mpi.comm.size()}.
+{\bf Rdsm}中的共享对象，可以是
+{\bf dsmv}和{\bf dsmm}类中的数值向量或矩阵，也可以是{\bf dsml}类中的 R 列表。
+为了效率，向量和矩阵与服务器的通讯是二进制的形式进行的，而列表进行了序列化。
+还有一个内置变量{\bf myinfo}用于获取每一个进程的 ID 和
+进程总数，这和{\bf Rmpi}中的{\bf mpi.comm.rank()}和{\bf mpi.comm.size()}返回
+的信息一样。
 
-To install, again use {\bf install.packages()} as above.  There is
-built-in documentation, but it's best to read through the code {\bf
-MatMul.R} in the {\bf examples} directory of the {\bf Rdsm} distribution
-first.  It is heavily commented, with the goal of serving as an
-introduction to the package.
+{\bf Rdsm}同样可以使用上面提到的{\bf install.packages()}进行安装。
+{\bf Rdsm}提供了内置文档，不过最好还是要通读{\bf examples}文件夹下
+的{\bf MatMul.R}代码。里面提供了大量注释，
+希望可以作为这个扩展包的一个入门。
 
 \subsection{示例：使用 Rdsm 进行对角分块矩阵求逆}
 
-Let's see how the block-diagonal matrix inversion example from Section
-\ref{blkd} can be handled in {\bf Rdsm}.
+现在让我们来看如何将\ref{blkd}节中的对角分块矩阵求逆使用{\bf Rdsm}处理。
 
 \begin{lstlisting}
 # invert a block diagonal matrix m, whose sizes are given in szs; here m
@@ -1063,7 +1056,7 @@ getrng <- function(matsz, blkszs) {
 }
 \end{lstlisting}
 
-The parallel work is basically done in four lines:
+相较于{\bf snow}中的11行代码，这里主要的并行工作由这4行完成：
 
 \begin{lstlisting}
 myid <- myinfo$myid
@@ -1072,9 +1065,8 @@ bd[rng,rng] <- solve(bd[rng,rng])
 barr()  # barrier
 \end{lstlisting}
 
-compared to about 11 lines in the {\bf snow} implementation above.  This
-illustrates the power of the shared-memory programming model over
-message passing.
+
+这也展示了内存共享编程模型相对信息传递模型的优势。
 
 \subsection{示例：Web Probe}
 
@@ -1149,8 +1141,8 @@ webprobe <- function(sitefile,ww) {
 \subsection{bigmemory 扩展包}
 \label{bigmemory}
 
-Jay Emerson and Mike Kane developed the {\bf bigmemory} package when I
-was developing {\bf Rdsm}; neither of us knew about the other.
+Jay Emerson 和 Mike Kane 在我开发{\bf Rdsm}的同时，开发了{\bf bigmemory}扩展包；
+而我们互相都不知道这一点。
 
 The {\bf bigmemory} package is not intended to provide a threads
 environment.  Instead, it is used to deal with a hard limit R has:
