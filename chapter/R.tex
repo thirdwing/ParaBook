@@ -899,57 +899,51 @@ clusterEvalQ(cls,myinfo$id)
 比如说，在一个四核的机器上运行{\bf multicore}，
 调用{\bf mclapply()}会（默认）在你的机器上调用4个 R，
 并行地进行你的运算工作。其中每个 R 调用都使用和调用前的 R 一样的变量设置。
-Thus
-all the variables are shared initially (note that qualifier), and you as
-the programmer do not take any special action to transfer variables from
-the manager node to the worker nodes, quite a contrast to {\bf snow}.
+因此所有的变量最初（注意这个修饰语）是共享的，
+而不需要程序员采取特别的措施来将变量从管理节点
+分配到工作节点，这和{\bf snow}相当不同。
 
-The way all this is accomplished is that {\bf mclapply()} calls your OS'
-{\bf fork()} function.  (It is thus limited to Unix-family OSs, such as
-Linux and Macs.)  The process that is forked is R itself, with one new
-copy per desired worker node.
+这一切都是由{\bf mclapply()}调用你操作系统中的{\bf fork()}函数来完成的。
+（所以这仅限于类 Unix 系统，比如 Linux 和 MacOS。）
+这个 fork 过程是由 R 自己完成的，每个工作节点一个新的拷贝。
 
-The workers thus start with copies of R all sharing whatever variables
-existed at the time of the fork (including locals in the function that
-you had call {\bf mclapply()}).  Thus your code does not have to copy
-these variables to the workers, which automatically have access to them.
-But note carefully that the variables are shared only initially, and a
-write to one copy is NOT reflected in the other copies (including the
-original one).
+因此分配到 R 拷贝的工作节点会共享所有在 fork 发生时存在的变量
+（也包括你调用{\bf mclapply()}时的局部变量）。
+所以你的代码不需要将这些变量拷贝到工作节点，
+工作节点会自动获取它们。
+但需要注意的是，这些变量只是在最初的时候是共享的，对其中一个拷贝的
+修改不会再其它拷贝中有所反应（包括最初的那个）。
 
-The copying of the initial values of the variables from the manager node
-to the worker nodes is done on a {\bf copy-on-write} basis, meaning that
-data isn't copied to a node until (and unless) the node tries to access
-that data.  The granularity is at the virtual memory page level (Section
-\ref{howvmworks}).  Again, the OS handles this, not R.
+从管理节点到工作节点的初始值拷贝是基于{\bf copy-on-write}的，
+这意味着直到一个节点尝试获取数据，这份数据才会被拷贝过去。
+这个粒度（granularity）是在虚拟内存页（ virtual memory page）层面（\ref{howvmworks}节）上的。
+同样，这由操作系统处理，不是 R。
 
-Thus some physical copying does occur eventually, done by the OS, so
-{\bf multicore} will not have as much advantage over {\bf snow} as one
-might think.  However, there may be some latency-hiding advantage
-(Section \ref{latencybandwidth}).  It may be the case that not all
-workers need to access some variable at the same time, so one worker
-might do so while others are doing actual computation.
+由于这个物理拷贝最终还是会由操作系统完成，
+所以{\bf multicore}相对{\bf snow}并没有很多人所想的那么有优势。
+然而，这可能在处理延迟方面由一定优势（\ref{latencybandwidth}节）。
+有些情况下，不需要所有节点同时获取变量，
+所以可能一个节点在拷贝变量，而其余的在进行计算。.
 
-Note too that, in contrast to {\bf snow}, in which a cluster is set up
-once per session and then repeatedly reused at each {\bf snow} function
-call, with {\bf multicore} the worker R processes are set up again from
-scratch each time a {\bf multicore} function is called.
+还需要注意一点，{\bf snow}中，一个集群被设置好，会在每个
+{\bf snow}函数调用中重复使用，而{\bf multicore}与此不同，
+每一个 R 进程都在一个{\bf multicore}函数被调用时从头开始。
 
 \subsection{示例：使用 multicore 进行邻接矩阵转换}
 
-Same application as in Section \ref{snowadj}, and indeed the function
-{\bf tgonchunk()} below is just a modified version of what we had in the
-{\bf snow} code.
+和\ref{snowadj}节中的示例一样，而且实际上下面的
+{\bf tgonchunk()}函数就是我们前面
+{\bf snow}代码的修改版。
 
-The call
+
 
 \begin{lstlisting}
 mclapply(starts,tgonchunk,m1,chunksize,mc.cores=ncores)
 \end{lstlisting}
 
-applies the function {\bf tgonchunk()} to every element of the vector
-{\bf starts} (changed to an R list first), with {\bf m1} and {\bf
-chunksize} serving as additional arguments to {\bf mclapply()}.
+这个调用会将{\bf tgonchunk()}函数作用于
+{\bf starts}向量的每一个元素上（首先会被转换成 R 列表），
+其中{\bf m1}和{\bf chunksize}作为{\bf mclapply()}的参数使用。
 
 \begin{lstlisting}
 # transgraph problem, R multicore version
@@ -992,12 +986,13 @@ tgonchunk <- function(start,m1,chunksize) {
 
 \section{Rdsm}
 
-My {\bf Rdsm} package can be used as a threads system regardless of
-whether you are on a NOW or a multicore machine.  It is an extension of
-a similar package I wrote in 2002 for Perl, called PerlDSM.  (N.
+
+无论你在一个 NOW 网络还是一个多核机器上，
+我的{\bf Rdsm}扩展包都可以做一个内存共享系统来使用。
+这是我在2002年开发的一个类似的 Perl 扩展包， PerlDSM\footnote{N.
 Matloff, PerlDSM: A Distributed Shared Memory System for Perl, {\it
-Proceedings of PDPTA 2002}, 2002, 63-68.)  The major advantages of {\bf
-Rdsm} are:
+Proceedings of PDPTA 2002}, 2002, 63-68.}的扩展。
+{\bf Rdsm}的主要优势在于：
 
 \begin{itemize}
 
@@ -1005,7 +1000,7 @@ Rdsm} are:
 Section \ref{sharedbetter}, is commonly considered in the parallel
 processing community to be clearer than messag-passing.
 
-\item It allows full use of R's debugging tools.
+\item 可以充分使用 R 的调试工具。
 
 \end{itemize}
 

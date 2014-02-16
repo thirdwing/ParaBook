@@ -123,15 +123,7 @@
 \usepackage{enumitem}
 \setlist{itemsep=0.2ex,partopsep=0pt,parsep=0.2ex,topsep=5pt}
 
-\usepackage{makeidx}
-\usepackage{cosmidx}
-\def\tcode{\expandafter\lstinline[basicstyle={},breaklines=true]}
-\makeindex{terms}
-\makeindex{software}
-\makeindex{author}
-\newcommand{\tindex}[2]{\index{terms}{#1@#2}}
-\newcommand{\sindex}[2]{\index{software}{#1@#2}}
-\newcommand{\aindex}[2]{\index{author}{#1@#2}}
+
 
 \renewcommand{\thefootnote}{\scriptsize{\textcircled{\tiny{\arabic{footnote}}}}}
 \DeclareGraphicsExtensions{.pdf,.jpg,.png}
