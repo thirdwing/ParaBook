@@ -1070,28 +1070,21 @@ barr()  # barrier
 
 \subsection{示例：Web Probe}
 
-In the general programming community, one major class of applications,
-even on a serial platform, is parallel I/O.  Since each I/O operation
-may take a long time (by CPU standards), it makes sense to do them in
-parallel if possible.  {\bf Rdsm} facilitates doing this in R.
+在一般的编程社区中，一类主要的应用，甚至是在一个串行平台上，
+就是并行化 I/O。由于每一个 I/O 操作可以消耗很长时间（以 CPU 标准），
+如果可能的话，进行并行化是十分必要的。{\bf Rdsm}在 R 中提供了这样的功能。
 
-The example below repeatedly cycles through a large list of Web sites,
-taking measurements on the time to access each one.  The data are stored
-in a shared variable {\bf accesstimes}; the {\bf n} most recent access
-times are stored.  Each {\bf Rdsm} process works on one Web site at a
-time.
+下面的示例在一个很大的网站列表中循环进行，
+测量每次获取一个网站所用的时间。数据被储存
+在一个共享变量{\bf accesstimes}中；前{\bf n}个最近的获取时间被记录下来。
+每个{\bf Rdsm}进程每次在处理一个网站。
 
-An unusual feature here is that one of the processes immediately exits,
-returning to the R interactive command line.  This allows the user to
-monitor the data that is being collected.  Remember, the shared
-variables are still accessible to that process.  Thus while the other
-processes are continually adding data to {\bf accesstimes} (and deleted
-one item for each one added), the user can give commands to the exited
-process to analyze the data, say with histograms, as the collection
-progresses.
+这里的一个不寻常的特点是其中一个进程会马上退出，回到 R 的交换性命令行中。
+这就允许用户来检测搜集的数据。记住，共享的变量仍然可以被该进程获取。
+因此，当其他进程继续向{\bf accesstimes}添加数据（每次添加时也进行一次删除），
+用户可以向退出的进程下命令来随着搜集工作，分析数据，比如说柱状图。
 
-Note the use of lock/unlock operations here, with the {\bf Rdsm}
-variables of the same names.
+注意这里 lock/unlock 操作的使用，{\bf Rdsm}中使用了同样的名称。
 
 \begin{lstlisting}
 # if the variable accesstimes is length n, then the Rdsm vector
@@ -1144,8 +1137,8 @@ webprobe <- function(sitefile,ww) {
 Jay Emerson 和 Mike Kane 在我开发{\bf Rdsm}的同时，开发了{\bf bigmemory}扩展包；
 而我们互相都不知道这一点。
 
-The {\bf bigmemory} package is not intended to provide a threads
-environment.  Instead, it is used to deal with a hard limit R has:
+{\bf bigmemory}扩展包的目的不在于提供一个多线程环境。
+Instead, it is used to deal with a hard limit R has:
 No R object can be larger than $2^{31}-1$ bytes.  This holds even if you
 have a 64-bit machine with lots of RAM.  The {\bf bigmemory} package
 solves the problem on a multicore machine, by making use of operating
