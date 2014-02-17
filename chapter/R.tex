@@ -1138,9 +1138,10 @@ Jay Emerson 和 Mike Kane 在我开发{\bf Rdsm}的同时，开发了{\bf bigmem
 而我们互相都不知道这一点。
 
 {\bf bigmemory}扩展包的目的不在于提供一个多线程环境。
-Instead, it is used to deal with a hard limit R has:
-No R object can be larger than $2^{31}-1$ bytes.  This holds even if you
-have a 64-bit machine with lots of RAM.  The {\bf bigmemory} package
+它的目的在于处理一个 R 的硬性限制：
+任何 R 对象都不能大于$2^{31}-1$字节。
+即使你用一个有很大内存的64位机器，这个限制也是存在的。
+{\bf bigmemory}扩展包
 solves the problem on a multicore machine, by making use of operating
 system calls to set up shared memory between processes.\footnote{It can
 also be used on distributed systems, by exploiting OS services to map
@@ -1191,7 +1192,7 @@ alternative I recommend works as follows:
 
 \end{itemize}
 
-细节会在后面的章节中讨论。
+更多细节会在后面的章节中讨论。
 
 \subsection{gputools 扩展包}
 
