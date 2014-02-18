@@ -9,6 +9,6 @@
 
 译者：[寇强](http://www.weibo.com/thirdwing)
 
-本书为open textbook，翻译工作也遵循开源原则。请由兴趣翻译的朋友们，积极提交。
+本书为open textbook，翻译工作也遵循开源原则。请有兴趣翻译的朋友们，积极加入项目，提交翻译。
 
 注：请使用xelatex编译，中文文件请以UTF-8编码。
