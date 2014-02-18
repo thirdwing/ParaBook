@@ -1254,43 +1254,39 @@ R CMD SHLIB z.c
 \section{通过在 R 中调用 C 进行并行}
 \label{cfromr}
 
-Parallel R aims to be faster than ordinary R.  But even if that aim is
-achieved, it's still R, and thus potentially slow.
+并行 R 的目的在于比普通的 R 要快。但即使这个目的达到了，这也还是 R，也就是
+说，还是可能很慢。
 
-One must always decide how much effort one is willing to devote to
-optimization.  For the fastest code, we should not write in C, but
-rather in assembly language.  Similarly, one must decide whether to
-stick purely to R, or go to the faster C.  If parallel R gives you the
-speed you need in your application, fine; if not, though, you should
-consider writing part of your application in C, with the main part still
-written in R.  You may find that placing the parallelism in the C
-portion of your code is good enough, while retaining the convenience of
-R for the rest of your code.
+人们总是必须决定花费多少精力在优化上面的。
+为了最快的速度，我们甚至都不应该用 C，而应该用汇编语言。
+类似地，也必须决定是纯粹用 R，还是用更快的 C。如果
+并行 R 给了你所需要的速度，那再好不过；
+如果速度不够，你应该考虑在主体仍用 R 的情况下，
+用 C 完成一部分工作。
+你会发现，在保持用 R 的方便的前提下，在用 C 处理代码的并行部分已经足够好了。
+
 
 \subsection{在 R 中调用 C}
 
-In C, two-dimensional arrays are stored in row-major order, in contrast
-to R's column-major order.   For instance, if we have a 3x4 array, the
-element in the second row and second column is element number 5 of the
-array when viewed linearly, since there are three elements in the first
-column and this is the second element in the second column.  Of course,
-keep in mind that C subscripts begin at 0, rather than at 1 as with R.
-In writing your C code to be interfaced to R, you must keep these issues
-in mind.
+在 C中，二维数组以行序存储，和 R 中列序相反。
+例如，如果我们有一个3$\times$4的数组，
+第二行第二列中的元素在线性视角下是第5个元素，
+因为第一列中有3个元素，而这是第二列中的第二个元素。
+当然，还需要注意 C 的计数从0开始，而 R 从1开始。
+在写供 R 使用的 C 代码时，你必须考虑这些问题。
 
-All the arguments passed from R to C are received by C as pointers.
-Note that the C function itself must return {\tt void}.  Values that we
-would ordinarily return must in the R/C context be communicated through the
-function's arguments, such as {\tt result} in our example below.
+所有从 R 传递到 C 的参数都被作为 C 的指针。
+注意 C 函数自身必须返回{\tt void}。
+在 R/C 中传递的数值比如作为函数的参数，
+比如我们下面示例中的{\tt result}。
 
-\subsection{Example:  Extracting Subdiagonals of a Matrix}
+\subsection{示例：矩阵的次对角线}
 
-As an example, here is C code to extract subdiagonals from a square
-matrix.\footnote{I wish to thank my former graduate assistant, Min-Yu
-Huang, who wrote an earlier version of this function.} The code is in a
-file {\bf sd.c}:
+作为一个示例，这里是用于求一个方阵次对角线的 C 代码
+\footnote{感谢我的研究生助理 Min-Yu Huang，他完成了这个函数的早期版本。}。
+代码被保存在一个名为{\bf sd.c}的文件中：
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 // arguments:
 //    m:  a square matrix
 //    n:  number of rows/columns of m
@@ -1307,8 +1303,7 @@ void subdiag(double *m, int *n, int *k, double *result)
 }
 \end{lstlisting}
 
-For convenience, you can compile this by rubnning R in a terminal
-window, which will invoke GCC:
+为了方便，你可以在一个命令行中运行 R 来编译它，这会调用GCC：
 
 \begin{lstlisting}
 % R CMD SHLIB sd.c
@@ -1316,13 +1311,14 @@ gcc -std=gnu99 -I/usr/share/R/include      -fpic  -g -O2 -c sd.c -o sd.o
 gcc -std=gnu99 -shared  -o sd.so sd.o   -L/usr/lib/R/lib -lR
 \end{lstlisting}
 
-Note that here R showed us exactly what it did in invoking GCC.  This
-allows us to do some customization.
+注意 R 向我们展示了它在调用 GCC 时所作的具体操作。
+这允许我们来做一些改动。
 
-But note that this simply produced a dynamic library, {\bf sd.o}, not an
-executable program.  (On Windows this would presumably be a {\bf .dll}
-file.)  So, how is it executed?  The answer is that it is loaded into R,
-using R's {\bf dyn.load()} function.  Here is an example:
+需要注意这只会生成一个动态链接库{\bf sd.o}，
+而不是一个可执行程序。（在 Windows 下会是{\bf .dll}）
+所以，怎么来执行它？
+答案是使用 R 的{\bf dyn.load()}函数来载入它。
+这里是一个示例：
 
 \begin{lstlisting}
 > dyn.load("sd.so")
@@ -1343,9 +1339,8 @@ $result
 [1] 11 17 23
 \end{lstlisting}
 
-Note that we needed to allocate space for {\tt result} in our call, in a
-variable we've named {\tt result}.  The value placed in there by our
-function is seen above to be correct.
+注意我们需要在调用时为{\bf result}分配内存空间。
+从上面的结果来看，我们的函数在对应空间中放置的值是正确的。T
 
 \subsection{在 R 中调用 OpenMPI C 代码}
 
@@ -1358,12 +1353,11 @@ function is seen above to be correct.
 
 \subsection{在 R 中调用 CUDA 代码}
 
-The same principles apply here, but one does have to be careful with
-libraries and the like.
+这里也适用同样的原则，但需要小心调用的库和类似的问题。
 
-As before, we want to compile not to an executable file, but to a dynamic
-library file.  Here's how, for the C file {\bf mutlinksforr.cu}
-presented in the next section, the compile command is
+和上面一样，我们需要编译以动态链接库而不是可执行文件。
+这是下面要用的文件{\bf mutlinksforr.cu}，
+和编译用的命令：
 
 \begin{lstlisting}
 pc41:~% nvcc -g -G -I/usr/local/cuda/include -Xcompiler
@@ -1372,7 +1366,7 @@ pc41:~% nvcc -shared -Xlinker "-L/usr/lib/R/lib -lR"
    -L/usr/local/cuda/lib mutlinks.o -o meanlinks.so
 \end{lstlisting}
 
-The product of this was {\bf meanlinks.so}.  I then tested it on R:
+这会生成{\bf meanlinks.so}。之后我在 R 中进行测试：
 
 \begin{lstlisting}
 > dyn.load("meanlinks.so")
@@ -1399,12 +1393,13 @@ $mo
 [1] 0.3333333
 \end{lstlisting}
 
-\subsection{示例：Mutual Outlinks}
+\subsection{示例：Mutual Outlink}
 
-We again take as our example the mutual-outlinks example from Section
-\ref{mutlinks}.  Here is an R/CUDA version:
+我们再次使用
+\ref{mutlinks}节中的 Mutual Outlink 示例。
+这里是 R/CUDA 版本的代码：
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 // CUDA example:  finds mean number of mutual outlinks, among all pairs
 // of Web sites in our set
 
@@ -1473,8 +1468,7 @@ void meanout(int *hm, int *nrc, double *meanmut)
 
 \end{lstlisting}
 
-The code is hardly optimal.  We should, for instance, have more than one
-thread per block.
+这份代码几乎没有进行优化。比如，我们应该在每一个 block 中使用不止一个线程。
 
 \section{调试 R 程序}
 
@@ -1507,37 +1501,39 @@ RStudio，另一个跨平台的 IDE的开发者，从2011年夏天也开始计�
 
 \subsection{缺少命令行终端的问题}
 
-Parallel R packages such as {\bf Rmpi}, {\bf snow}, {\bf foreach} and so
-on do not set up a terminal for each process, thus making it impossible
-to use R's debugger on the workers.  What then can one do to debug apps
-for those packages?  Let's consider {\bf snow} for concreteness.
+诸如{\bf Rmpi}、{\bf snow}、{\bf foreach}和其它
+的并行 R 扩展包并未给每一个进程设置命令行终端，从而
+使得在工作节点上进行调试变得不可能。
+那我们怎样调试使用这些扩展包的程序呢？
+这里拿{\bf snow}做个例子。
 
-First, one should debug the underlying single-worker function, such as {\bf
-mtl()} in our mutual outlinks example in Section \ref{rmutlinks}.  Here
-one would set up some artificial values of the arguments, and then use
-R's ordinary debugging facilities.
+首先，需要调试调试每个工作节点上的函数，比如
+\ref{rmutlinks}节 mutual outlink 示例中的{\bf mtl()}函数。
+这时需要人为设置一下参数的值，之后使用 R 常规调试机制。 
 
-This may be sufficient.  However, the bug may be in the arguments
-themselves, or in the way we set them up.  Then things get more
-difficult.  It's hard to even print out trace information, e.g. values
-of variables, since {\bf print()} won't work in the worker processes.
-The {\bf message()} function may work for some of these packages; if
-not, you may have to resort to using {\bf cat()} to write to a file.
 
-{\bf Rdsm} allows full debugging, as there is a separate terminal window
-for each process.
+这可能有效。但 bug 很可能就出现在参数本身上，
+或者出现在我们设置它们的方式上。
+事情就变得困难了。
+由于 {\bf print()} 在工作进程中无法工作，
+即使打印出诸如变量值的追踪信息都很难。
+{\bf message()}函数可能对一些扩展包有效；
+但如果无效，你需要自己使用{\bf cat()}来将变量写到文件中。 
+
+{\bf Rdsm}支持全面的调试，它在每个进程中都有一个单独的命令行终端。 
 
 \subsection{调试 R 所调用的 C 代码}
 
-For parallel R that is implemented via R calls to C code, producing a
-dynamically-loaded library as in Section \ref{cfromr}, debugging is a
-little more involved.  First start R under GDB, then load the library to
-be debugged.  At this point, R's interpreter will be looping,
-anticipating reading an R command from you.  Break the loop by hitting
-ctrl-c, which will put you back into {\it GDB's} interpreter.  Then set
-a breakpoint at the C function you want to debug, say {\bf subdiag()} in
-our example above.  Finally, tell GDB to continue, and it will then stop
-in your function!  Here's how your session will look:
+如果像\ref{cfromr}节中，并行是通过
+在 R 中调用 C，生成一个动态链接库实现的，
+调试会更复杂一些。
+首先，需要在 GDB 下启动 R，
+之后载入需要调试的库。
+这是 R 的解释器会循环读取你发出的 R 命令。
+通过使用ctrl-c来跳出循环，这会让你返回{\bf GDB}的解释器。
+之后在需要调试的 C 函数，比如上面例子中的{\bf subdiag()}，设置断点。
+最终，告诉 GDB 继续，它就在你的函数中暂停下来。
+这里展示了你的会话内容：
 
 \begin{lstlisting}
 $ R -d gdb
