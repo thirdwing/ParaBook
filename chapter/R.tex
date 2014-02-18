@@ -1141,42 +1141,37 @@ Jay Emerson 和 Mike Kane 在我开发{\bf Rdsm}的同时，开发了{\bf bigmem
 它的目的在于处理一个 R 的硬性限制：
 任何 R 对象都不能大于$2^{31}-1$字节。
 即使你用一个有很大内存的64位机器，这个限制也是存在的。
-{\bf bigmemory}扩展包
-solves the problem on a multicore machine, by making use of operating
-system calls to set up shared memory between processes.\footnote{It can
-also be used on distributed systems, by exploiting OS services to map
-memory to files.}
+{\bf bigmemory}扩展包通过使用操作系统的调用在进程间设置共享内存，
+从而在多核机器上解决了这个问题\footnote{通过使用操作系统将内存
+映射到文件上，这个扩展包也可以在分布式系统上使用}。
 
-In principle, {\bf bigmemory} could be used for threading, but the
-package includes no infrastructure for this.  However, one can use {\bf
-Rdsm} in conjunction with {\bf bigmemory}, an advantage since the latter
-is very efficient.
+理论上讲， {\bf bigmemory}也可以用在多线程上，
+但其为包含这方面的机制。然而，{\bf Rdsm}可以和{\bf bigmemory}一起使用，
+由于后者的高效，这也带来了优势。
 
-Using {\bf bigmemory} variables in {\bf Rdsm} is quite simple:  Instead
-of calling {\bf cnewdsm()} to create a shared variable, call {\bf newbm()}.
+在{\bf Rdsm}中使用{\bf bigmemory}变量非常简单：
+使用{\bf newbm()}而不是{\bf cnewdsm()}来创建共享变量即可。
 
 \section{R 和 GPU}
 
-The blinding speed of GPUs (for certain problems) is sure to of interest
-to more and more R users in the coming years.
+未来几年中，（为了特定问题）将 GPU 的高效和 R 进行结合一定会
+让越来越多的程序员感兴趣。
 
-As of today, the main vehicle for writing GPU code is CUDA, on NVIDIA
-graphics cards.  CUDA is a slight extension of C.
+现在，进行 GPU 开发的主流框架就是在 NVIDIA 的显卡上使用 CUDA。
+CUDA 是 C 的一个扩展。
 
-You may need to write your own CUDA code, in which case you need to use
-the methods of Section \ref{cfromr}.  But in many cases you can get what
-you need in ready-made form, via the two main packages for GPU programming
-with R, {\bf gputools} and {\bf rgpu}.  Both deal mainly with linear
-algebra operations.  The remainder of this section will deal with these
-packages.
+如果你需要写自己的 CUDA 代码，那你可能要使用\ref{cfromr}节中的方法。
+但在多数情况下，你可以从 R 中 GPU 计算的两个主要扩展包，{\bf gputools} 和 {\bf rgpu}，
+找到你需要的功能。
+两个扩展包都主要处理线性代数操作。这小节剩余部分会讨论
+这两个扩展包。
 
 \subsection{安装}
 \label{gpuinstall}
 
-Note that, due to issues involving linking to the CUDA libraries, in
-the cases of these two packages, you probably will {\it not} be able to
-install them by merely calling {\bf install.packages()}.   The
-alternative I recommend works as follows:
+由于两个扩展包中链接到 CUDA 库的问题，
+你可能{\it 不能}通过{\bf install.packages()}来进行安装。
+我推荐的安装方法如下：
 
 \begin{itemize}
 
@@ -1196,37 +1191,29 @@ alternative I recommend works as follows:
 
 \subsection{gputools 扩展包}
 
-In installing {\bf gputools}, I downloaded the source from the CRAN R
-repository site, and unpacked as above.  I then removed the subcommand
+为了安装{\bf gputools}，我从 CRAN 下载了源代码，并像前面提到的
+解压缩。我去掉了{\bf src}文件夹下{\bf Makefile.in}文件中的
+几个选项\texttt{-gencode arch=compute\_20,code=sm\_20}。
+我还确定了 shell 的启动文件中包含了 CUDA 的执行路径和库路径，
+{\bf /usr/local/cuda/bin}和{\bf /usr/local/cuda/lib}。
 
-\begin{verbatim}
--gencode arch=compute_20,code=sm_20
-\end{verbatim}
+之后我运行了{\bf R CMD INSTALL}。
+我使用了{\bf gpuLm.fit()}进行测试，
+R 中{\bf lm.fit()}在{\bf gputools}中的对应版本。
 
-from the file {\bf Makefile.in} in the {\bf src} directory.  I also
-made sure that my shell startup file included my CUDA executable and
-library paths, {\bf /usr/local/cuda/bin} and {\bf /usr/local/cuda/lib}.
+这个扩展包提供了多种线性代数操作，比如矩阵相乘、
+求解$Ax = b$（矩阵求逆）和奇异值分解，
+以及一些需要大量计算的操作，比如线性/广义线性模型估计和层级聚类。
 
-I then ran {\bf R CMD INSTALL} as above.  I tested it by trying
-{\bf gpuLm.fit()}, the {\bf gputools} version of R's regular {\bf
-lm.fit()}.
-
-The package offers various linear algebra routines, such as matrix
-multiplication, solution of Ax = b (and thus matrix inversion), and
-singular value decomposition, as well as some computation-intensive
-operations such as linear/generalize linear model estimation and
-hierarchical clustering.
-
-Here for instance is how to find the square of a matrix {\bf m}:
+这里是如何求矩阵{\bf m}平方的示例：
 
 \begin{lstlisting}
 > m2 <- gpuMatMult(m,m)
 \end{lstlisting}
 
-The {\bf gpuSolve()} function works like the R {\bf solve()}.  The call
-\lstinline{gpuSolve(a,b)} will solve the linear system ax = b, for a
-square matrix {\bf a} and vector {\bf b}.  If the second argument is
-missing, then $a^{-1}$ will be returned.
+{\bf gpuSolve()}函数和 R 中的{\bf solve()}一样。调用
+\texttt{gpuSolve(a,b)}会求解线性系统$ax = b$，其中{\bf a}是一个方阵，
+而{\bf b}是一个向量。如果第二个参数缺失，会返回$a^{-1}$。
 
 \subsection{rgpu 扩展包}
 \label{rgpu}
@@ -1244,27 +1231,21 @@ R_INC_PATH = /usr/include/R
 第一行是为了让系统找到{\bf -lcuda}，这点和{\bf gputools}一样。
 第二行是为了 NVIDIA SDK 中的{\bf cutil.h}文件，上面的是我的安装路径。
 
-For the third line, I made a file {\bf z.c} consisting solely of the
-line
-
+第三行中，我生成了一个{\bf z.c}文件，其中只包含
 \begin{lstlisting}
 #include <R.h>
 \end{lstlisting}
-
-and ran
-
+一行，之后运行
 \begin{lstlisting}
 R CMD SHLIB z.c
 \end{lstlisting}
+来看 R 的引用文件究竟在哪里。
 
-just to see whether the R include file was.
-
-As of May 2010, the routines in {\bf rgpu} are much less extensive than
-those of {\bf gputools}.  However, one very nice feature of {\bf rgpu}
-is that one can compute matrix expressions without bringing intermediate
-results back from the device memory to the host memory, which would be a
-big slowdown.  Here for instance is how to compute the square of the
-matrix {\bf m}, plus itself:
+在2010年5月是，{\bf rgpu}中的函数远少于{\bf gputools}。
+然而，{\bf rgpu}中一个很好的特性在于
+在进行矩阵运算时，不需要将中间结果从 device 内存返回到 host 内存，
+这是个开销很大的操作。
+这里展示了如何计算矩阵{\bf m}的乘法，并加上自身：
 
 \begin{lstlisting}
 > m2m <- evalgpu(m %*% m + m)
