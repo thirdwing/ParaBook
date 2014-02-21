@@ -715,7 +715,7 @@ introductory example.
 
 This code implements the sampling bucket sort of Section \ref{bsort}.
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 // OpenMP introductory example:  sampling bucket sort
 
 // compile:  gcc -fopenmp -o bsort bucketsort.c
@@ -1151,7 +1151,7 @@ convenience, I'll refer to the portion of {\bf parallel} that came from
 
 Let's use matrix-vector multiply as an example to learn from:
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 > library(parallel)
 > c2 <- makePSOCKcluster(rep("localhost",2))
 > c2
@@ -1253,7 +1253,7 @@ the other worker.  This is a message-passing system, indeed.
 
 So, how does the {\bf mmul} code work?  Here's a handy copy:
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 mmul <- function(cls,u,v) {
    rowgrps <- splitIndices(nrow(u),length(cls))
    grpmul <- function(grp) u[grp,] %*% v
@@ -1321,7 +1321,7 @@ workers other than for this one-time matrix multiply, we may wish to
 change to code so that we send each worker only the rows of {\bf a} that
 we need:
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 mmul1 <- function(cls,u,v) {
    rowgrps <- splitIndices(nrow(u),length(cls))
    uchunks <- Map(function(grp) u[grp,],rowgrps)
@@ -1333,7 +1333,7 @@ mmul1 <- function(cls,u,v) {
 
 Let's test it:
 
-\begin{lstlisting}[numbers=left]
+\begin{lstlisting}
 > a <- matrix(sample(1:50,16,replace=T),ncol=2)
 > b <- c(5,-2)
 > clusterExport(c2,"b")  # don't send a
