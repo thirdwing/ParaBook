@@ -1,23 +1,20 @@
 \chapter{并行处理入门}
 \label{chap:intro}
 
-Parallel machines provide a wonderful opportunity for applications with
-large computational requirements.  Effective use of these machines,
-though, requires a keen understanding of how they work.  This chapter
-provides an overview of both the software and hardware.
+并行设备为需要大量计算的应用程序提供了一个极佳的机会。
+而对这些设备的有效使用需要对其工作原理有一个清晰的了解。
+这个章节给大家提供了一个软件和硬件两方面的概述。
 
-\section{Why Use Parallel Systems?}
+\section{为什么要使用并行系统？}
 
-\subsection{Execution Speed}
+\subsection{执行速度}
 
-There is an ever-increasing appetite among some types of computer users
-for faster and faster machines. This was epitomized in a statement by
-the late Steve Jobs, founder/CEO of Apple and Pixar. He noted that when
-he was at Apple in the 1980s, he was always worried that some other
-company would come out with a faster machine than his. But later at
-Pixar, whose graphics work requires extremely fast computers, he was
-always \underbar{hoping} someone would produce faster machines, so that
-he could use them!
+在一些计算机用户当中，对更快的机器的需求一直在增长。
+这个在苹果和皮克斯公司的创始人和 CEO，Steve Jobs 的一份回忆录中被多次强调。
+他写到，当他80年代在苹果公司的时候，他总是担心别的公司
+会生产出比他们更快的计算机。但后来在皮克斯的时候，
+因为图形处理对高速计算的大量需求，他总是希望别人可以
+生产更快的机器，那他就可以用这些机器了！
 
 A major source of speedup is the parallelizing of operations. Parallel
 operations can be either within-processor, such as with pipelining or
