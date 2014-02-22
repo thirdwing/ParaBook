@@ -17,14 +17,15 @@
 生产更快的机器，那他就可以用这些机器了！
 
 加速的一个主要来源就是操作的并行化。
-Parallel
-operations can be either within-processor, such as with pipelining or
-having several ALUs within a processor, or between-processor, in which
-many processor work on different parts of a problem in parallel. Our
-focus here is on between-processor operations.
+并行操作既可以是处理器内部的，
+比如单个处理器内部的 pipelining 或多个 ALU\footnote{Arithmetic Logic Unit，算术逻辑单元，
+是处理器中的一个功能模块，用来执行诸如加减乘除以及寄存器中的值之间的逻辑运算}，
+也可以是处理器之间的，不同的处理器并行的处理一个问题
+的不同部分。我们这里着重于处理器之间的操作。
 
-For example, the Registrar's Office at UC Davis uses shared-memory
-multiprocessors for processing its on-line registration work.  Online
+例如，加州大学戴维斯分校的注册办公室使用
+内存共享的多处理器系统来处理在线注册工作。
+Online
 registration involves an enormous amount of database computation.  In
 order to handle this computation reasonably quickly, the program
 partitions the work to be done, assigning different portions of the
