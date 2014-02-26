@@ -33,8 +33,9 @@
 了巨大贡献。
 
 正如 Pixar 的例子所示，诸如计算机图形处理等计算密集型的应用
-对快速的并行计算也有相当的需求。
-No one wants to wait hours just to generate a single image,
+对快速的并行计算也有相当的需求。example shows, highly computation-intensive applications
+like computer graphics also have a need for these fast parallel
+computers. No one wants to wait hours just to generate a single image,
 and the use of parallel processing machines can speed things up
 considerably. For example, consider \textbf{ray tracing} operations.
 Here our code follows the path of a ray of light in a scene, accounting
