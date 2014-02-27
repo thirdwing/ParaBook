@@ -34,16 +34,15 @@
 
 正如 Pixar 的例子所示，诸如计算机图形处理等计算密集型的应用
 对快速的并行计算也有相当的需求。
-No one wants to wait hours just to generate a single image,
-and the use of parallel processing machines can speed things up
-considerably. For example, consider \textbf{ray tracing} operations.
-Here our code follows the path of a ray of light in a scene, accounting
-for reflection and absorbtion of the light by various objects. Suppose
-the image is to consist of 1,000 rows of pixels, with 1,000 pixels per
-row.  In order to attack this problem in a parallel processing manner
-with, say, 25 processors, we could divide the image into 25 squares of
-size 200x200, and have each processor do the computations for its
-square.
+没人愿意为生成一张图片就等几个小时，
+而并行计算可以显著地提升速度。
+这里我们以 \textbf{ray tracing} 操作为例。
+我们的代码需要在考虑光在不同物体上的反射和吸收的情况下，
+跟踪一个场景里光线。
+假设这个图像有一个行像素点组成，每一行也由1000个像素点构成。
+比如说要用25个处理器并行地解决这个问题，
+我们可以将图像分为200$\times$200的25块，
+而由每个处理器处理其中一块。
 
 Note, though, that it may be much more challenging than this implies.
 First of all, the computation will need some communication between the
