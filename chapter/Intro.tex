@@ -65,19 +65,20 @@
 
 \subsection{分布式处理}
 
-In the above two subsections we've hit the two famous issues in computer
-science---time (speed) and space (memory capacity).  But there is a
-third reason to do parallel processing, which actually has its own name,
-{\bf distributed processing}.  In a distributed database, for instance,
-parts of the database may be physically located in widely dispersed
-sites.  If most transactions at a particular site arise locally, then
-we would make more efficient use of the network, and so on.
+前面两个小节里，我们讨论了计算机科学里最重要的
+两个问题——时间（速度）和空间（内存容量）。
+但还有第三个原因驱使我们进行并行计算——{\bf 分布式处理}。
+例如，在一个分布式数据库中，
+数据库的各个部分可以在物理位置上相隔很远。
+如果一个位置上的事务（transaction）处理需求上升，
+我们将会通过网络来提升效率。
 
-\subsection{Our Focus Here}
+\subsection{我们的着重点}
 
-In this book, the primary emphasis is on processing speed.
+在本书中，我们注意着重在处理速度上。
 
-\section{Parallel Processing Hardware}
+
+\section{并行处理硬件}
 
 This is a common scenario:  Someone acquires a fancy new parallel
 machine, and excitedly writes a program to run on it---only to find that
@@ -91,9 +92,9 @@ turn means that we need a good understanding of the underlying hardware
 that we are programming.  In this section, we give an overview of
 parallel hardware.
 
-\subsection{Shared-Memory Systems}
+\subsection{内存共享系统}
 
-\subsubsection{Basic Architecture}
+\subsubsection{基本构架}
 
 Here many CPUs share the same physical memory.  This kind of
 architecture is sometimes called MIMD, standing for Multiple Instruction
@@ -113,7 +114,7 @@ as, well, cores.  In this book, the term {\it processor} will generally
 include cores, e.g. a dual-core chip will be considered to have two
 processors.} are commonplace in the home and even in cell phones!
 
-\subsubsection{Multiprocessor Topologies}
+\subsubsection{多处理器结构}
 
 A Symmetric Multiprocessor (SMP) system has the following structure:
 
@@ -125,7 +126,7 @@ processors are all on one chip, attached to the bus.
 So-called NUMA architectures will be discussed in Chapter
 \ref{chap:shared}.
 
-\subsubsection{Memory Issues Etc.}
+\subsubsection{内存问题}
 
 Consider the SMP figure above.
 
@@ -179,15 +180,15 @@ arbitration signals and/or arbitration devices are used.
 All of the above issues can have major on the speed of our program, as
 will be seen later.
 
-\subsection{Message-Passing Systems}
+\subsection{信息传递系统}
 
-\subsubsection{Basic Architecture}
+\subsubsection{基础构架}
 
 Here we have a number of independent CPUs, each with its own independent
 memory.  The various processors communicate with each other via networks
 of some kind.
 
-\subsubsection{Example:  Clusters}
+\subsubsection{示例：集群（cluster）}
 
 Here one has a set of commodity PCs and networks them for use as a
 parallel processing system. The PCs are of course individual machines,
@@ -227,7 +228,7 @@ lockstep, SIMD-fashion.
 
 \section{Programmer World Views}
 
-\subsection{Example:  Matrix-Vector Multiply}
+\subsection{示例：矩阵向量相乘}
 \label{matvec}
 
 To explain the paradigms, we will use the term \textbf{nodes}, where
@@ -251,7 +252,7 @@ thousands of rows, possibly even millions.  Otherwise the computation
 could be done quite satisfactorily in a {\bf serial}, i.e.
 nonparallel manner, making parallel processing unnecessary..
 
-\subsection{Shared-Memory}
+\subsection{内存共享}
 
 \subsubsection{Programmer View}
 \label{sharedview}
@@ -625,7 +626,7 @@ main()}.  Thus some may argue that this is not really a true barrier.
 Barriers are very common in shared-memory programming, and will be
 discussed in more detail in Chapter \ref{chap:shared}.
 
-\subsubsection{Role of the OS}
+\subsubsection{操作系统的角色}
 
 Let's again ponder the role of the OS here.  What happens when a thread
 tries to lock a lock:
@@ -663,7 +664,7 @@ Each thread (just like each process in general) has its own stack.  When
 a thread begins a turn, the OS prepares for this by pointing the stack
 pointer register to this thread's stack.
 
-\subsubsection{Debugging Threads Programs}
+\subsubsection{调试 Threads 程序}
 \label{debugthreads}
 
 Most debugging tools include facilities for threads.  Here's an overview
@@ -709,7 +710,7 @@ abstractions.  We will study OpenMP in detail in Chapter \ref{chap:omp},
 and use it frequently in the succeeding chapters, but below is an
 introductory example.
 
-\subsubsection{Example:  Sampling Bucket Sort}
+\subsubsection{示例：Sampling Bucket Sort}
 \label{ompbsort}
 
 This code implements the sampling bucket sort of Section \ref{bsort}.
@@ -851,7 +852,7 @@ your code of clutter.
 
 \end{itemize}
 
-\subsubsection{Debugging OpenMP}
+\subsubsection{调试 OpenMP}
 
 Since there are threads underlying the OpenMP execution, you should be
 able to use your debugging tool's threads facilities.  Note, though,
