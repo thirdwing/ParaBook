@@ -46,25 +46,24 @@
 
 但需要强调的是，实际情况比这有挑战得多。
 首先，计算需要各个处理器直接的通信，如果不仔细处理，这会对性能有很大影响。
-Second, if one really wants good speedup, one may need to take into
-account the fact that some squares require more computation work than
-others.  More on this below.
+其次，如果真的需要很好的加速，可能需要考虑一个问题，
+那就是其中一些分块比其它需要更多的计算量。下面我们还会讨论这个问题。
 
-We are now in the era of Big Data, which requires Big Computation, thus
-again generating a major need for parallel processing.
+我们正处于大数据时代，这需要大型的计算，
+因此又产生了对并行处理的一个重要需求。
 
-\subsection{Memory}
 
-Yes, execution speed is the reason that comes to most people's minds
-when the subject of parallel processing comes up.  But in many
-applications, an equally important consideration is memory capacity.
-Parallel processing application often tend to use huge amounts of
-memory, and in many cases the amount of memory needed is more than can
-fit on one machine.  If we have many machines working together,
-especially in the message-passing settings described below, we can
-accommodate the large memory needs.
+\subsection{内存}
 
-\subsection{Distributed Processing}
+的确，当并行处理出现时，执行速度可能是多数首先想到的。
+但在很多应用中，一个同样重要的考虑就是内存容量。
+并行应该经常需要大量的内存，并且在很多情况下会超出
+单机的极限。
+如果我们有很多机器同时工作，
+特别是后面提到的信息传递系统中，
+我们可以解决大量的内存需求。
+
+\subsection{分布式处理}
 
 In the above two subsections we've hit the two famous issues in computer
 science---time (speed) and space (memory capacity).  But there is a
