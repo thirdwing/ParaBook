@@ -80,28 +80,27 @@
 
 \section{并行处理硬件}
 
-This is a common scenario:  Someone acquires a fancy new parallel
-machine, and excitedly writes a program to run on it---only to find that
-the parallel code is actually slower than the original serial version!
-This is due to lack of understanding of how the hardware works, at least
-at a high level.
+有一个经常出现的情景：
+有人有了一个很新的并行设备，很兴奋地写了一个程序在上面运行，
+但最后却发现，并行的代码比之前的串行版本还要慢！
+这主要源于，至少在高层次上，对硬件工作原理缺乏了解。
 
-This is not a hardware book, but since the goal of using parallel
-hardware is speed, the efficiency of our code is a major issue.  That in
-turn means that we need a good understanding of the underlying hardware
-that we are programming.  In this section, we give an overview of
-parallel hardware.
+这不是本针对硬件的书，但由于使用并行计算的目的在于速度，
+代码的效率就是主要问题了。
+这也意味着我们要对我们所使用的硬件有一个相对的了解。
+在本节，我们会给给出并行硬件的一个概述。
 
 \subsection{内存共享系统}
 
 \subsubsection{基本构架}
 
-Here many CPUs share the same physical memory.  This kind of
-architecture is sometimes called MIMD, standing for Multiple Instruction
-(different CPUs are working independently, and thus typically are
-executing different instructions at any given instant), Multiple Data
-(different CPUs are generally accessing different memory locations at
-any given time).
+这种情况下，多个 CPU 使用相同的物理内存。
+这种构架一般被称作 MIMD，
+全称为 Multiple Instruction
+（different CPUs are working independently, and thus typically are
+executing different instructions at any given instant），Multiple Data
+（different CPUs are generally accessing different memory locations at
+any given time）。
 
 Until recently, shared-memory systems cost hundreds of thousands of
 dollars and were affordable only by large companies, such as in the
