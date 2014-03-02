@@ -97,14 +97,12 @@
 这种情况下，多个 CPU 使用相同的物理内存。
 这种构架一般被称作 MIMD，
 全称为 Multiple Instruction
-（different CPUs are working independently, and thus typically are
-executing different instructions at any given instant），Multiple Data
-（different CPUs are generally accessing different memory locations at
-any given time）。
+（由于不同的 CPU 独立工作，所以会执行不同的指令），Multiple Data
+（在给定时间点，不同的 CPU 一般会使用不同的内存位置）。
 
-Until recently, shared-memory systems cost hundreds of thousands of
-dollars and were affordable only by large companies, such as in the
-insurance and banking industries.  The high-end machines are indeed
+不久以前，内存共享系统造价非常高，
+一般只有诸如保险和银行这种大公司才能负担起。
+The high-end machines are indeed
 still quite expensive, but now {\bf multicore} machines, in which two or
 more CPUs share a common memory,\footnote{The terminology gets confusing
 here.  Although each core is a complete processor, people in the field
