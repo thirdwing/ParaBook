@@ -105,20 +105,17 @@
 
 不久以前，内存共享系统造价非常高，
 一般只有诸如保险和银行这种大公司才能负担起。
-The high-end machines are indeed
-still quite expensive, but now {\bf multicore} machines, in which two or
-more CPUs share a common memory,\footnote{The terminology gets confusing
-here.  Although each core is a complete processor, people in the field
-tend to call the entire chip a ``processor,'' referring to the cores,
-as, well, cores.  In this book, the term {\it processor} will generally
-include cores, e.g. a dual-core chip will be considered to have two
-processors.} are commonplace in the home and even in cell phones!
+高端的机器的确依然很贵，
+但现在{\bf 多核}机器，两个或更多的 CPU 共享内存，在家里甚至在手机上
+都是很常见的\footnote{这里的术语有一些令人困惑。
+尽管每个核都是一个完整的处理器，但这个领域的人们倾向于将整个芯片成为
+一个``处理器''。本书中，处理器一般会包括多核，例如，一个四核的芯片被认为有两个处理器。}！
 
 \subsubsection{多处理器结构}
 
-A Symmetric Multiprocessor (SMP) system has the following structure:
+一个对称多处理器系统（symmetric multiprocessor system，SMP）包涵以下结构：
 
-
+\includegraphics{Images/UMABus.jpg} 
 
 The multicore setup is effectively the same as SMP, except that the
 processors are all on one chip, attached to the bus.
