@@ -7,7 +7,9 @@
 
 英文版更新地址：http://heather.cs.ucdavis.edu/~matloff/158/PLN/ParProcBook.pdf
 
-译者：[寇强](http://www.weibo.com/thirdwing) 邮箱：kouqiang@mail3.sysu.edu.cn
+译者：
+* [寇强](http://www.weibo.com/thirdwing) 邮箱：kouqiang@mail3.sysu.edu.cn
+* 焦慧甜 邮箱：fishj1990@gmail.com
 
 对翻译有任何疑问，请随时通过github、weibo私信或邮件联系我。
 
